@@ -33,8 +33,8 @@ public class Ra3Map
         var map = new Ra3Map();
         map.MapFilePath = mapFilePath;
 
-        // try
-        // {
+        try
+        {
             var bytes = File.ReadAllBytes(mapFilePath);
             using var memoryStream = new MemoryStream(bytes);
             var binaryReader = new BinaryReader(memoryStream);
@@ -83,11 +83,11 @@ public class Ra3Map
             // memoryStream.Close();
 
             return map;
-        // }catch (System.Exception ex)
-        // {
-        //     map._hasError = true;
-        //     throw new BadMapException();
-        // }
+        }catch (System.Exception ex)
+        {
+            map._hasError = true;
+            throw new BadMapException();
+        }
     }
     
     public void SaveAs(string mapFilePath, bool compress = true)
