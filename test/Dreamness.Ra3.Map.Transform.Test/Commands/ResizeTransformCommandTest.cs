@@ -14,12 +14,12 @@ public class ResizeTransformCommandTest
     [Test]
     public void Test1()
     {
-        var ra3MapFacade = Ra3MapFacade.Open(PathUtil.RA3MapFolder, "官方地图_工业区_IndustrialStrength");
+        var ra3MapFacade = Ra3MapFacade.Open(Ra3PathUtil.RA3MapFolder, "官方地图_工业区_IndustrialStrength");
 
         var resizeTransformCommand = new ResizeTransformCommand(ra3MapFacade, 500, 900, -100, -100);
         resizeTransformCommand.Transform();
 
         var destinationRa3MapFacade = resizeTransformCommand.DestinationRa3MapFacade;
-        destinationRa3MapFacade.SaveAs(PathUtil.RA3MapFolder, "out_resize_2");
+        destinationRa3MapFacade.SaveAs(Ra3PathUtil.RA3MapFolder, "out_resize_2");
     }
 }

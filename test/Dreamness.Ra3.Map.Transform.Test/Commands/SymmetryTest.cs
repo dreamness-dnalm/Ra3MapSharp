@@ -14,9 +14,9 @@ public class SymmetryTest
     [Test]
     public void Test1()
     {
-        var map = Ra3MapFacade.Open(PathUtil.RA3MapFolder, "NewMap");
+        var map = Ra3MapFacade.Open(Ra3PathUtil.RA3MapFolder, "NewMap");
 
         var ra3MapFacade = SymmetryStrategy.Of(3, map, 2).Transform();
-        ra3MapFacade.SaveAs(PathUtil.RA3MapFolder, "sy_out_4");
+        ra3MapFacade.SaveAs(Ra3PathUtil.RA3MapFolder, "sy_out_4");
     }
 }

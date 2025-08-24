@@ -6,7 +6,7 @@ using System.Reflection;
 
 namespace Dreamness.Ra3.Map.Facade.Util
 {
-    public class PathUtil
+    public class Ra3PathUtil
     {
         public static string RA3MapFolder = Path.Combine(Environment.GetEnvironmentVariable("APPDATA"), "Red Alert 3", "Maps");
         // public static string WorkingDir = Directory.GetCurrentDirectory();

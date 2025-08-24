@@ -42,7 +42,7 @@ public class ObjectsListAsset: BaseAsset
     public ObjectAsset AddWaypoint(string name, Vec3D position, BaseContext context)
     {
         var id = maxWaypointId + 1;
-        _waypointNameSet.Add(name);
+        // _waypointNameSet.Add(name);
         return AddWaypoint(id, name, position, context);
     }
     
@@ -57,7 +57,7 @@ public class ObjectsListAsset: BaseAsset
     {
         if (playerId < 0 || playerId > 6)
         {
-            throw new System.Exception("Player ID must be between 0 and 6.");
+            throw new System.Exception("Player ID must be between 1 and 6.");
         }
         
         var name = $"Player_{playerId}_Start";

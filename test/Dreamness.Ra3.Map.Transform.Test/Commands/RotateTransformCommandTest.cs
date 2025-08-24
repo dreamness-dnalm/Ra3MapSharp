@@ -14,12 +14,12 @@ public class RotateTransformCommandTest
     [Test]
     public void Test1()
     {
-        var ra3MapFacade = Ra3MapFacade.Open(PathUtil.RA3MapFolder, "官方地图_工业区_IndustrialStrength");
+        var ra3MapFacade = Ra3MapFacade.Open(Ra3PathUtil.RA3MapFolder, "官方地图_工业区_IndustrialStrength");
 
         var rotateTransformCommand = new RotateTransformCommand(ra3MapFacade, 180);
         rotateTransformCommand.Transform();
 
         var destinationRa3MapFacade = rotateTransformCommand.DestinationRa3MapFacade;
-        destinationRa3MapFacade.SaveAs(PathUtil.RA3MapFolder, "out_180");
+        destinationRa3MapFacade.SaveAs(Ra3PathUtil.RA3MapFolder, "out_180");
     }
 }
