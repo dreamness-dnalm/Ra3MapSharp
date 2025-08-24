@@ -1,4 +1,6 @@
 using Dreamness.Ra3.Map.Parser.Asset.Impl.GameObject;
+using Dreamness.Ra3.Map.Parser.Asset.Impl.Player;
+using Dreamness.Ra3.Map.Parser.Asset.Impl.Team;
 using Dreamness.Ra3.Map.Parser.Util;
 
 namespace Dreamness.Ra3.Map.Facade.Core;
@@ -40,9 +42,29 @@ public partial class Ra3MapFacade
         }
     }
 
-    public void Remove(ObjectWrap o)
+    public void Remove(object o)
     {
-        RemoveByUniqueId(o.UniqueId);
+        if (o == null)
+        {
+            throw new ArgumentNullException("o");
+        }
+
+        if (o is ObjectWrap objectWrap)
+        {
+            RemoveByUniqueId((o as ObjectWrap).UniqueId);
+        }
+        else if (o is PlayerData playerData)
+        {
+            _sideListAsset.PlayerDataList.Remove(playerData);
+        }
+        else if (o is TeamAsset teamAsset)
+        {
+            _teamsAsset.TeamList.Remove(teamAsset);
+        }
+        else
+        {
+            throw new ArgumentException("Unsupported type for Remove: " + o.GetType());
+        }
     }
     
     

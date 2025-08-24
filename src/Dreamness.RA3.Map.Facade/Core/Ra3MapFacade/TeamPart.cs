@@ -11,9 +11,9 @@ public partial class Ra3MapFacade
     private TeamsAsset _teamsAsset { get; set; }
     
     
-    public WritableList<TeamAsset> GetTeams()
+    public List<TeamAsset> GetTeams()
     {
-        return _teamsAsset.TeamList;
+        return _teamsAsset.TeamList.ToList();
     }
 
     public string ExportTeamsToJsonStr()
@@ -25,6 +25,13 @@ public partial class Ra3MapFacade
     {
         ra3Map.Context.ImportTeamsAssetFromJson(jsonStr);
         LoadTeams();
+    }
+
+    public TeamAsset AddTeam(string teamName, string owerPlayerName)
+    {
+        var teamAsset = TeamAsset.Of(teamName, owerPlayerName, ra3Map.Context);
+        _teamsAsset.TeamList.Add(teamAsset);
+        return teamAsset;
     }
     
     

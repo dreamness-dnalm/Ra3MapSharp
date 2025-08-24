@@ -11,9 +11,9 @@ public partial class Ra3MapFacade
 {
     private SidesListAsset _sideListAsset;
     
-    public WritableList<PlayerData> GetPlayers()
+    public List<PlayerData> GetPlayers()
     {
-        return _sideListAsset.PlayerDataList;
+        return _sideListAsset.PlayerDataList.ToList();
     }
     
     public string ExportPlayersToJsonStr()
@@ -26,6 +26,28 @@ public partial class Ra3MapFacade
         ra3Map.Context.ImportSidesListAssetFromJson(jsonStr);
         LoadPlayer();
     }
+    
+    public PlayerData AddPlayer(string playerName)
+    {
+        var playerData = PlayerData.Of(playerName, ra3Map.Context);
+        _sideListAsset.PlayerDataList.Add(playerData);
+        return playerData;
+    }
+
+    public PlayerData GetPlayer(string playerName)
+    {
+        var playerDatas = GetPlayers().Where(p => p.Name == playerName).ToList();
+        if (playerDatas.Count == 0)
+        {
+            return null;
+        }
+        else
+        {
+            return playerDatas.First();
+        }
+    }
+    
+    
     
     // --------- init -----------
     private void LoadPlayer()
