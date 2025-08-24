@@ -6,6 +6,10 @@
         <Nullable>enable</Nullable>
         <AssemblyName>Dreamness.RA3.Map.Facade</AssemblyName>
         <RootNamespace>Dreamness.RA3.Map.Facade</RootNamespace>
+
+        <PackageId>Dreamness.RA3.Map.Facade</PackageId>
+        <Description>A tool for ra3 map, base on the parser.</Description>
+        
     </PropertyGroup>
 
     <ItemGroup>

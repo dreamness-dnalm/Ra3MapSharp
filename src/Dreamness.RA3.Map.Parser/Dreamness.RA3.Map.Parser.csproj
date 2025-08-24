@@ -7,10 +7,14 @@
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <AssemblyName>Dreamness.RA3.Map.Parser</AssemblyName>
         <RootNamespace>Dreamness.RA3.Map.Parser</RootNamespace>
+        
+        <PackageId>Dreamness.RA3.Map.Parser</PackageId>
+        <Description>A parser for ra3 map.</Description>
+        
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="System.Text.Json" Version="8.0.5" />
+        <PackageReference Include="System.Text.Json" Version="8.0.5" />
     </ItemGroup>
 
 </Project>

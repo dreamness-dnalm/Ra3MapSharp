@@ -1,0 +1,46 @@
+<Project>
+    <PropertyGroup>
+        <!-- 通用打包信息 -->
+        <Authors>Dreamness</Authors>
+        <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+
+        <!-- 版本：统一用 VersionPrefix，必要时项目内可覆盖 -->
+        <VersionPrefix>1.0.0</VersionPrefix>
+
+        <!-- 多目标可放到各项目，或在此统一 -->
+        <!--<TargetFrameworks>net8.0;net6.0;netstandard2.0</TargetFrameworks>-->
+
+        <!-- NuGet 页面展示 -->
+<!--        <PackageReadmeFile>README.md</PackageReadmeFile>-->
+<!--        <PackageIcon>icon.png</PackageIcon>-->
+
+        <!-- 调试与符号 -->
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <IncludeSymbols>true</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+
+        <!-- Source Link（.NET 8+ 原生支持） -->
+        <RepositoryType>git</RepositoryType>
+        <PackageProjectUrl>https://github.com/dreamness-dnalm/Ra3MapSharp</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/dreamness-dnalm/Ra3MapSharp.git</RepositoryUrl>
+        <PublishRepositoryUrl>true</PublishRepositoryUrl>
+        <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+
+        <!-- 默认标签，可在项目里覆盖或追加 -->
+        <PackageTags>ra3;ra;red-alert;modding;tools;cnc;cnc3</PackageTags>
+
+        <!-- 可确保可复现构建 -->
+        <Deterministic>true</Deterministic>
+    </PropertyGroup>
+
+    <!-- 把解决方案根的 README / icon 打进每个包 -->
+<!--    <ItemGroup>-->
+<!--        <None Include="$(SolutionDir)README.md" Pack="true" PackagePath="\" Condition="Exists('$(SolutionDir)README.md')" />-->
+<!--        <None Include="$(SolutionDir)icon.png"  Pack="true" PackagePath="\" Condition="Exists('$(SolutionDir)icon.png')" />-->
+<!--    </ItemGroup>-->
+
+    <!-- .NET 8 以前可显式添加 SourceLink 包；.NET 8+ 通常可省略 -->
+<!--    <ItemGroup Condition="'$(TargetFrameworkIdentifier)' == '.NETFramework' Or '$(NETCoreAppCurrent)' == '' ">-->
+<!--        <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />-->
+<!--    </ItemGroup>-->
+</Project>

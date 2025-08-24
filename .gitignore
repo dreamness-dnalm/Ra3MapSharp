@@ -4,3 +4,4 @@
 .idea
 .vscode
 *.sln.DotSettings.user
+artifacts
