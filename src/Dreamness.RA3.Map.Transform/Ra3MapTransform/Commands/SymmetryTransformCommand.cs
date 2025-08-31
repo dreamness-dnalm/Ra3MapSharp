@@ -114,7 +114,7 @@ public class SymmetryTransformCommand: BaseTransformCommand
      * *
      */
     
-    public SymmetryTransformCommand(Ra3MapFacade origin, int divideType, int templateAreaIndex, List<int> executeAreaIndies) : base(origin)
+    public SymmetryTransformCommand(Ra3MapFacade origin, int divideType, int templateAreaIndex) : base(origin)
     {
         if((divideType == 6 || divideType == 8) && origin.MapWidth != origin.MapHeight)
         {
@@ -126,39 +126,39 @@ public class SymmetryTransformCommand: BaseTransformCommand
             throw new ArgumentException("divideType must be in range [1, 10]");
         }
         
-        ExecuteAreaIndies = new HashSet<int>(executeAreaIndies);
-        ExecuteAreaIndies.Remove(templateAreaIndex);
-
-        if (ExecuteAreaIndies.Count == 0)
-        {
-            throw new ArgumentException("ExecuteAreaIndies must contain at least one element.");
-        }
-
-        int maxIndex = ExecuteAreaIndies.Max();
-        int minIndex = ExecuteAreaIndies.Min();
-
-        if (minIndex < 1)
-        {
-            throw new ArgumentException("minIndex must at last 1");
-        }
-
-        if (divideType <= 8)
-        {
-            if (maxIndex > 2)
-            {
-                throw new ArgumentException("bad index: " + maxIndex);
-            }
-
-            DivideCount = 2;
-        }
-        else if (divideType <= 10)
-        {
-            if (maxIndex > 4)
-            {
-                throw new ArgumentException("bad index: " + maxIndex);
-            }
-            DivideCount = 4;
-        }
+        // ExecuteAreaIndies = new HashSet<int>(executeAreaIndies);
+        // ExecuteAreaIndies.Remove(templateAreaIndex);
+        //
+        // if (ExecuteAreaIndies.Count == 0)
+        // {
+        //     throw new ArgumentException("ExecuteAreaIndies must contain at least one element.");
+        // }
+        //
+        // int maxIndex = ExecuteAreaIndies.Max();
+        // int minIndex = ExecuteAreaIndies.Min();
+        //
+        // if (minIndex < 1)
+        // {
+        //     throw new ArgumentException("minIndex must at last 1");
+        // }
+        //
+        // if (divideType <= 8)
+        // {
+        //     if (maxIndex > 2)
+        //     {
+        //         throw new ArgumentException("bad index: " + maxIndex);
+        //     }
+        //
+        //     DivideCount = 2;
+        // }
+        // else if (divideType <= 10)
+        // {
+        //     if (maxIndex > 4)
+        //     {
+        //         throw new ArgumentException("bad index: " + maxIndex);
+        //     }
+        //     DivideCount = 4;
+        // }
         // else if (divideType == 11)
         // {
         //     if (maxIndex > 8)
