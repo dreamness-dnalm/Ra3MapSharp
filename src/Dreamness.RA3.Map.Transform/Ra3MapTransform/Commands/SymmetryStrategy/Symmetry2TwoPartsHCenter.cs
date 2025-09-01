@@ -10,9 +10,9 @@ namespace Dreamness.RA3.Map.Transform.Ra3MapTransform.Commands.SymmetryStrategy;
     * ********
  */
 
-public class Symmetry1TwoPartsH: SymmetryStrategy
+public class Symmetry2TwoPartsHCenter: SymmetryStrategy
 {
-    public Symmetry1TwoPartsH(Ra3MapFacade sourceMapFacade, int templateAreaIndex) : base(sourceMapFacade, templateAreaIndex, 2)
+    public Symmetry2TwoPartsHCenter(Ra3MapFacade sourceMapFacade, int templateAreaIndex) : base(sourceMapFacade, templateAreaIndex, 2)
     {
     }
 

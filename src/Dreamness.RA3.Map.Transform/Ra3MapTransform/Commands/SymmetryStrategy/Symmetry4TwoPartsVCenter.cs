@@ -11,9 +11,9 @@ namespace Dreamness.RA3.Map.Transform.Ra3MapTransform.Commands.SymmetryStrategy;
      * *********
  */
 
-public class Symmetry3TwoPartsV: SymmetryStrategy
+public class Symmetry4TwoPartsVCenter: SymmetryStrategy
 {
-    public Symmetry3TwoPartsV(Ra3MapFacade sourceMapFacade, int templateAreaIndex) : base(sourceMapFacade, templateAreaIndex, 2)
+    public Symmetry4TwoPartsVCenter(Ra3MapFacade sourceMapFacade, int templateAreaIndex) : base(sourceMapFacade, templateAreaIndex, 2)
     {
     }
 
