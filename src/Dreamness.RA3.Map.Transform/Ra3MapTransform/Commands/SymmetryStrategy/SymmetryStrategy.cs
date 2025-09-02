@@ -142,10 +142,23 @@ public abstract class SymmetryStrategy
             //     return new HorizontalSymmetryStrategy();
             case 1:
                 return new Symmetry1TwoPartsH(map, templateAreaIndex);
-            // case 2:
-            //     return new DiagonalSymmetryStrategy();
+            case 2:
+                return new Symmetry2TwoPartsHCenter(map, templateAreaIndex);
             case 3:
                 return new Symmetry3TwoPartsV(map, templateAreaIndex);
+            case 4:
+                return new  Symmetry4TwoPartsVCenter(map, templateAreaIndex);
+            case 5:
+                return new Symmetry5TwoPartsBackslashCenter(map, templateAreaIndex);
+            case 6:
+                return new Symmetry6TwoPartsBackslash(map, templateAreaIndex);
+            case 7:
+                return new Symmetry7TwoPartsSlashCenter(map, templateAreaIndex);
+            case 8:
+                return new Symmetry8TwoPartsSlash(map, templateAreaIndex);
+            // case 9:
+            // case 10:
+            // case 11:
             default:
                 throw new ArgumentException("Invalid symmetry type");
         }
