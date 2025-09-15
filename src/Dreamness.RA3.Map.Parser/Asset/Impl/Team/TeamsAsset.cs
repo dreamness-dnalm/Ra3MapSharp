@@ -84,7 +84,7 @@ public class TeamsAsset: BaseAsset
         return 1;
     }
 
-    public override string GetName()
+    public override string GetAssetType()
     {
         return AssetNameConst.Teams;
     }
@@ -98,8 +98,8 @@ public class TeamsAsset: BaseAsset
         }
         
         var teamsAsset = new TeamsAsset();
-        teamsAsset.Name = AssetNameConst.Teams;
-        teamsAsset.Id = context.RegisterStringDeclare(teamsAsset.Name);
+        teamsAsset.AssetType = AssetNameConst.Teams;
+        teamsAsset.Id = context.RegisterStringDeclare(teamsAsset.AssetType);
         teamsAsset.Version = teamsAsset.GetVersion();
         
         foreach (var jsonDocument in JsonDocumentList)

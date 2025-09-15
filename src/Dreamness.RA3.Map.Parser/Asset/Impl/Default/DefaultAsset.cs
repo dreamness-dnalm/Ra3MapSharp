@@ -11,7 +11,7 @@ public class DefaultAsset: BaseAsset
         throw new NotImplementedException();
     }
 
-    public override string GetName()
+    public override string GetAssetType()
     {
         throw new NotImplementedException();
     }

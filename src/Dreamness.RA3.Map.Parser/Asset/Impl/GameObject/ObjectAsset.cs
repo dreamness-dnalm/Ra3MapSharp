@@ -80,7 +80,7 @@ public class ObjectAsset: BaseAsset
         return 3;
     }
 
-    public override string GetName()
+    public override string GetAssetType()
     {
         return AssetNameConst.Object;
     }

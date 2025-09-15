@@ -20,10 +20,10 @@ public static class AssetParser
         asset.Id = binaryReader.ReadInt32();
         asset.Version = binaryReader.ReadInt16();
         asset.DataSize = binaryReader.ReadInt32();
-        asset.Name = context.GetDeclaredString(asset.Id);
+        asset.AssetType = context.GetDeclaredString(asset.Id);
         asset.Data = binaryReader.ReadBytes(asset.DataSize);
 
-        switch (asset.Name)
+        switch (asset.AssetType)
         {
             case AssetNameConst.WorldInfo:
                 asset = asset.Clone<WorldInfoAsset>();

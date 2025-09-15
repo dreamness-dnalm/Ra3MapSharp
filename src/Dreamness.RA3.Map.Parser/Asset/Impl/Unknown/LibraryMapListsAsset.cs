@@ -17,7 +17,7 @@ public class LibraryMapListsAsset: BaseAsset
         return 1;
     }
 
-    public override string GetName()
+    public override string GetAssetType()
     {
         return AssetNameConst.LibraryMapLists;
     }

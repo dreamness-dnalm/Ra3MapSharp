@@ -7,7 +7,7 @@ public abstract class BaseAsset: Ra3MapWritable
 {
     public int Id { get; set; }
     public short Version { get; set; }
-    public string Name { get; set; }
+    public string AssetType { get; set; }
     public int DataSize { get; set; }
 
     public byte[] Data { get; set; }
@@ -20,13 +20,13 @@ public abstract class BaseAsset: Ra3MapWritable
     
     public abstract short GetVersion();
 
-    public abstract String GetName();
+    public abstract String GetAssetType();
 
     public void ApplyBasicInfo(BaseContext context)
     {
         this.Version = GetVersion();
-        this.Name = GetName();
-        this.Id = context.RegisterStringDeclare(Name);
+        this.AssetType = GetAssetType();
+        this.Id = context.RegisterStringDeclare(AssetType);
     }
 
     public override byte[] ToBytes(BaseContext context)
@@ -90,7 +90,7 @@ public abstract class BaseAsset: Ra3MapWritable
         {
             Id = this.Id,
             Version = this.Version,
-            Name = this.Name,
+            AssetType = this.AssetType,
             DataSize = this.DataSize,
             Data = this.Data
         };
@@ -112,7 +112,7 @@ public abstract class BaseAsset: Ra3MapWritable
 
     public override string ToString()
     {
-        return "Asset: " + Name + 
+        return "Asset: " + AssetType + 
                " (Id: " + Id + 
                ", Version: " + Version + 
                ", DataSize: " + DataSize + 

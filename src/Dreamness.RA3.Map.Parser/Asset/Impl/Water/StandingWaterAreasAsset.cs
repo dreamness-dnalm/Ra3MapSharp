@@ -17,7 +17,7 @@ public class StandingWaterAreasAsset: BaseAsset
         return 2;
     }
 
-    public override string GetName()
+    public override string GetAssetType()
     {
         return AssetNameConst.StandingWaterAreas;
     }

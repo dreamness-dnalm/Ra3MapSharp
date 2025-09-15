@@ -127,7 +127,7 @@ public class ObjectsListAsset: BaseAsset
         return 3;
     }
 
-    public override string GetName()
+    public override string GetAssetType()
     {
         return AssetNameConst.ObjectsList;
     }

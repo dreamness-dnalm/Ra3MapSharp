@@ -19,7 +19,7 @@ public class PlayerScriptsList: BaseAsset
         return 1;
     }
 
-    public override string GetName()
+    public override string GetAssetType()
     {
         return AssetNameConst.PlayerScriptsList;
     }

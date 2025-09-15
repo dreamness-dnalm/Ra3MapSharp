@@ -43,14 +43,14 @@ public abstract class BaseContext
 
     public void RegisterAsset(BaseAsset asset)
     {
-        AssetDict.Add(asset.Name, asset);
+        AssetDict.Add(asset.AssetType, asset);
     }
     
     public void OverrideAsset(BaseAsset asset)
     {
-        if (AssetDict.ContainsKey(asset.Name))
+        if (AssetDict.ContainsKey(asset.AssetType))
         {
-            AssetDict[asset.Name] = asset;
+            AssetDict[asset.AssetType] = asset;
         }
         else
         {

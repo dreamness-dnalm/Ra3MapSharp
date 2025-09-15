@@ -62,7 +62,7 @@ public class GlobalLightingAsset: BaseAsset
         return 11;
     }
 
-    public override string GetName()
+    public override string GetAssetType()
     {
         return AssetNameConst.GlobalLighting;
     }

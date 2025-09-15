@@ -1,10 +1,9 @@
 using Dreamness.Ra3.Map.Parser.Asset.Base;
 using Dreamness.Ra3.Map.Parser.Core.Base;
 
+namespace Dreamness.Ra3.Map.Parser.Asset.Impl.Script;
 
-namespace Dreamness.Ra3.Map.Parser.Asset.SubAsset.Impl.Unknown;
-
-public class LibraryMaps: BaseAsset
+public class ScriptActionFalse: BaseAsset
 {
     public override short GetVersion()
     {

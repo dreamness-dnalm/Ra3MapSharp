@@ -37,7 +37,7 @@ public class HeightMapDataAsset: BaseAsset
         return 6;
     }
 
-    public override string GetName()
+    public override string GetAssetType()
     {
         return AssetNameConst.HeightMapData;
     }

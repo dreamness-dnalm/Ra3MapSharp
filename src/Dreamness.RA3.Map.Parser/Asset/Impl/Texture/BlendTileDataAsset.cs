@@ -70,7 +70,7 @@ public class BlendTileDataAsset: BaseAsset
         return 27;
     }
 
-    public override string GetName()
+    public override string GetAssetType()
     {
         return AssetNameConst.BlendTileData;
     }

@@ -89,7 +89,7 @@ public class SidesListAsset: BaseAsset
         return 6;
     }
 
-    public override string GetName()
+    public override string GetAssetType()
     {
         return AssetNameConst.SidesList;
     }
@@ -113,8 +113,8 @@ public class SidesListAsset: BaseAsset
         }
 
         var sidesListAsset = new SidesListAsset();
-        sidesListAsset.Name = AssetNameConst.SidesList;
-        sidesListAsset.Id = context.RegisterStringDeclare(sidesListAsset.Name);
+        sidesListAsset.AssetType = AssetNameConst.SidesList;
+        sidesListAsset.Id = context.RegisterStringDeclare(sidesListAsset.AssetType);
         sidesListAsset.Version = sidesListAsset.GetVersion();
         
         foreach (var jsonDocument in JsonDocumentList)

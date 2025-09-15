@@ -86,7 +86,7 @@ public class MPPositionInfo: BaseAsset
         return 0;
     }
 
-    public override string GetName()
+    public override string GetAssetType()
     {
         return AssetNameConst.MPPositionInfo;
     }

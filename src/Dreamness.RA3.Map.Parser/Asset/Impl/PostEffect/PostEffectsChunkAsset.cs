@@ -16,7 +16,7 @@ public class PostEffectsChunkAsset: BaseAsset
         return 2;
     }
 
-    public override string GetName()
+    public override string GetAssetType()
     {
         return AssetNameConst.PostEffectsChunk;
     }
