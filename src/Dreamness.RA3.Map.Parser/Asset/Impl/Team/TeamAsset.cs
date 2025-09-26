@@ -10,7 +10,7 @@ using Dreamness.Ra3.Map.Parser.Util;
 
 namespace Dreamness.Ra3.Map.Parser.Asset.Impl.Team;
 
-public class TeamAsset : Ra3MapWritable
+public class TeamAsset: Ra3MapWritable
 {
     [JsonIgnore] public AssetProperties Properties { get; private set; }
 

@@ -1,5 +1,8 @@
 using Dreamness.Ra3.Map.Parser.Asset.Base;
+using Dreamness.Ra3.Map.Parser.Asset.Collection.Dim1Array;
+using Dreamness.Ra3.Map.Parser.Asset.Util;
 using Dreamness.Ra3.Map.Parser.Core.Base;
+using Dreamness.Ra3.Map.Parser.Util;
 
 
 namespace Dreamness.Ra3.Map.Parser.Asset.Impl.Script;
@@ -36,16 +39,45 @@ public class Script: BaseAsset
         }
     }
 
-    private string ConditionComment;
+    private string conditionComment;
     
-    public string Condition_Comment
+    public string ConditionComment
     {
-        get => ConditionComment;
+        get => conditionComment;
         set
         {
-            if (ConditionComment != value)
+            if (conditionComment != value)
             {
-                ConditionComment = value;
+                conditionComment = value;
+                MarkModified();
+            }
+        }
+    }
+
+    private string actionComment;
+
+    public string ActionComment
+    {
+        get => actionComment;
+        set
+        {
+            if (actionComment != value)
+            {
+                actionComment = value;
+                MarkModified();
+            }
+        }
+    }
+    
+    private bool isSubroutine;
+    public bool IsSubroutine
+    {
+        get => isSubroutine;
+        set
+        {
+            if (isSubroutine != value)
+            {
+                isSubroutine = value;
                 MarkModified();
             }
         }
@@ -214,10 +246,26 @@ public class Script: BaseAsset
             }
         }
     }
-    
-    
-    
-    
+
+    private string unknown = "";
+    public string Unknown
+    {
+        get => unknown;
+        set
+        {
+            if (unknown != value)
+            {
+                unknown = value;
+                MarkModified();
+            }
+        }
+    }
+
+    public WritableList<OrCondition> ScriptOrConditions = new WritableList<OrCondition>();
+
+    public WritableList<ScriptAction> ScriptActionOnTrue = new WritableList<ScriptAction>();
+
+    public WritableList<ScriptActionFalse> ScriptActionFalse = new WritableList<ScriptActionFalse>();
     
     
     public override short GetVersion()
@@ -232,11 +280,85 @@ public class Script: BaseAsset
 
     protected override void _Parse(BaseContext context)
     {
-        throw new NotImplementedException();
+        var memoryStream = new MemoryStream(Data);
+        var binaryReader = new BinaryReader(memoryStream);
+
+        name = binaryReader.ReadDefaultString();
+        comment = binaryReader.ReadDefaultString();
+        conditionComment = binaryReader.ReadDefaultString();
+        actionComment = binaryReader.ReadDefaultString();
+        isActive = binaryReader.ReadBoolean();
+        deactivateUponSuccess = binaryReader.ReadBoolean();
+        activeInEasy = binaryReader.ReadBoolean();
+        activeInMedium = binaryReader.ReadBoolean();
+        activeInHard = binaryReader.ReadBoolean();
+        isSubroutine = binaryReader.ReadBoolean();
+        evaluationInterval = binaryReader.ReadInt32();
+        actionsFireSequentially = binaryReader.ReadBoolean();
+        loopActions = binaryReader.ReadBoolean();
+        loopCount = binaryReader.ReadInt32();
+        sequentialTargetType = binaryReader.ReadByte();
+        sequentialTargetName = binaryReader.ReadDefaultString();
+        unknown = binaryReader.ReadDefaultString();
+        
+        while (binaryReader.BaseStream.Position < DataSize)
+        {
+            var asset = AssetParser.FromBinaryReader(binaryReader, context);
+            if (asset is OrCondition orCondition)
+            {
+                ScriptOrConditions.Add(orCondition, ignoreModified: true);
+            }
+            else if (asset is ScriptAction scriptAction)
+            {
+                ScriptActionOnTrue.Add(scriptAction, ignoreModified: true);
+            }
+            else if (asset is ScriptActionFalse scriptActionFalse)
+            {
+                ScriptActionFalse.Add(scriptActionFalse, ignoreModified: true);
+            }
+            else
+            {
+                throw new InvalidDataException(
+                    $"Unexpected asset type in Script: {asset.GetType().Name}. Expected OrCondition, ScriptAction or ScriptActionFalse.");
+            }
+        }
+        
+        ObservableUtil.Subscribe(ScriptOrConditions, this);
+        ObservableUtil.Subscribe(ScriptActionOnTrue, this);
+        ObservableUtil.Subscribe(ScriptActionFalse, this);
+        
     }
 
     protected override byte[] Deparse(BaseContext context)
     {
-        throw new NotImplementedException();
+        using var memoryStream = new MemoryStream();
+        using var binaryWriter = new BinaryWriter(memoryStream);
+        
+        binaryWriter.WriteDefaultString(name);
+        binaryWriter.WriteDefaultString(comment);
+        binaryWriter.WriteDefaultString(conditionComment);
+        binaryWriter.WriteDefaultString(actionComment);
+        binaryWriter.Write(isActive);
+        binaryWriter.Write(deactivateUponSuccess);
+        binaryWriter.Write(activeInEasy);
+        binaryWriter.Write(activeInMedium);
+        binaryWriter.Write(activeInHard);
+        binaryWriter.Write(isSubroutine);
+        binaryWriter.Write(evaluationInterval);
+        binaryWriter.Write(actionsFireSequentially);
+        binaryWriter.Write(loopActions);
+        binaryWriter.Write(loopCount);
+        binaryWriter.Write(sequentialTargetType);
+        binaryWriter.WriteDefaultString(sequentialTargetName);
+        binaryWriter.WriteDefaultString(unknown);
+
+        binaryWriter.Write(ScriptOrConditions.ToBytes(context));
+        
+        binaryWriter.Write(ScriptActionOnTrue.ToBytes(context));
+        
+        binaryWriter.Write(ScriptActionFalse.ToBytes(context));
+        
+        binaryWriter.Flush();
+        return memoryStream.ToArray();
     }
 }

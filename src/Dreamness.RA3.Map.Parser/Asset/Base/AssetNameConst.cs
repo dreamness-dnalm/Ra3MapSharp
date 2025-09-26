@@ -15,6 +15,7 @@ public static class AssetNameConst
     public const string Teams = "Teams";
     public const string PlayerScriptsList = "PlayerScriptsList";
     public const string ScriptList = "ScriptList";
+    public const string ScriptConditionContent = "Condition"; // TODO: ??exists
     public const string Script = "Script";
     public const string ScriptGroup = "ScriptGroup";
     public const string OrCondition = "OrCondition";

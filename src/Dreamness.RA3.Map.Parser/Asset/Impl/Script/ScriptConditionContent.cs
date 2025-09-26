@@ -6,7 +6,7 @@ using Dreamness.Ra3.Map.Parser.Util;
 
 namespace Dreamness.Ra3.Map.Parser.Asset.Impl.Script;
 
-public class ScriptAction: BaseAsset
+public class ScriptConditionContent: BaseAsset
 {
     private int contentType;
     
@@ -82,17 +82,33 @@ public class ScriptAction: BaseAsset
         }
     }
     
+    private bool isInverted;
+    
+    public bool IsInverted
+    {
+        get => isInverted;
+        set
+        {
+            if (isInverted != value)
+            {
+                isInverted = value;
+                MarkModified();
+            }
+        }
+    }
     
     public WritableList<ScriptArgument> Arguments { get; } = new WritableList<ScriptArgument>();
     
+    
+    
     public override short GetVersion()
     {
-        return 3;
+        return 0;
     }
 
     public override string GetAssetType()
     {
-        return AssetNameConst.ScriptAction;
+        return AssetNameConst.ScriptConditionContent;
     }
 
     protected override void _Parse(BaseContext context)
@@ -114,6 +130,8 @@ public class ScriptAction: BaseAsset
         ObservableUtil.Subscribe(Arguments, this);
 
         enabled = binaryReader.ReadInt32() == 1;
+        
+        isInverted = binaryReader.ReadInt32() == 1;
     }
 
     protected override byte[] Deparse(BaseContext context)
@@ -129,6 +147,7 @@ public class ScriptAction: BaseAsset
         binaryWriter.Write(Arguments.ToBytes(context));
         
         binaryWriter.Write(Enabled ? 1 : 0);
+        binaryWriter.Write(IsInverted ? 1 : 0);
         
         binaryWriter.Flush();
         
