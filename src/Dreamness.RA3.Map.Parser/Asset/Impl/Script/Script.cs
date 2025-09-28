@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using Dreamness.Ra3.Map.Parser.Asset.Base;
 using Dreamness.Ra3.Map.Parser.Asset.Collection.Dim1Array;
 using Dreamness.Ra3.Map.Parser.Asset.Util;
@@ -265,7 +266,7 @@ public class Script: BaseAsset
 
     public WritableList<ScriptAction> ScriptActionOnTrue = new WritableList<ScriptAction>();
 
-    public WritableList<ScriptActionFalse> ScriptActionFalse = new WritableList<ScriptActionFalse>();
+    public WritableList<ScriptActionFalse> ScriptActionOnFalse = new WritableList<ScriptActionFalse>();
     
     
     public override short GetVersion()
@@ -308,14 +309,15 @@ public class Script: BaseAsset
             {
                 ScriptOrConditions.Add(orCondition, ignoreModified: true);
             }
+            else if (asset is ScriptActionFalse scriptActionFalse)
+            {
+                ScriptActionOnFalse.Add(scriptActionFalse, ignoreModified: true);
+            }
             else if (asset is ScriptAction scriptAction)
             {
                 ScriptActionOnTrue.Add(scriptAction, ignoreModified: true);
             }
-            else if (asset is ScriptActionFalse scriptActionFalse)
-            {
-                ScriptActionFalse.Add(scriptActionFalse, ignoreModified: true);
-            }
+
             else
             {
                 throw new InvalidDataException(
@@ -325,7 +327,7 @@ public class Script: BaseAsset
         
         ObservableUtil.Subscribe(ScriptOrConditions, this);
         ObservableUtil.Subscribe(ScriptActionOnTrue, this);
-        ObservableUtil.Subscribe(ScriptActionFalse, this);
+        ObservableUtil.Subscribe(ScriptActionOnFalse, this);
         
     }
 
@@ -356,9 +358,63 @@ public class Script: BaseAsset
         
         binaryWriter.Write(ScriptActionOnTrue.ToBytes(context));
         
-        binaryWriter.Write(ScriptActionFalse.ToBytes(context));
+        binaryWriter.Write(ScriptActionOnFalse.ToBytes(context));
         
         binaryWriter.Flush();
         return memoryStream.ToArray();
+    }
+
+    public JsonNode ToJsonNode()
+    {
+        var jsonObj = new JsonObject();
+        
+        jsonObj["Type"] = "Script";
+        
+        jsonObj["Name"] = name;
+        jsonObj["Comment"] = comment;
+        jsonObj["ConditionComment"] = conditionComment;
+        jsonObj["ActionComment"] = actionComment;
+        jsonObj["IsActive"] = isActive;
+        jsonObj["DeactivateUponSuccess"] = deactivateUponSuccess;
+        jsonObj["ActiveInEasy"] = activeInEasy;
+        jsonObj["ActiveInMedium"] = activeInMedium;
+        jsonObj["ActiveInHard"] = activeInHard;
+        jsonObj["IsSubroutine"] = isSubroutine;
+        jsonObj["EvaluationInterval"] = evaluationInterval;
+        jsonObj["ActionsFireSequentially"] = actionsFireSequentially;
+        jsonObj["LoopActions"] = loopActions;
+        jsonObj["LoopCount"] = loopCount;
+        jsonObj["SequentialTargetType"] = sequentialTargetType;
+        jsonObj["SequentialTargetName"] = sequentialTargetName;
+        // jsonObj["Unknown"] = unknown;
+
+        var ifJsonArr = new JsonArray();
+        foreach (var o in ScriptOrConditions)
+        {
+            ifJsonArr.Add(o.ToJsonNode());
+        }
+        jsonObj["If"] = ifJsonArr;
+        
+        var thenJsonArr = new JsonArray();
+        foreach (var o in ScriptActionOnTrue)
+        {
+            thenJsonArr.Add(o.ToJsonNode());
+        }
+        jsonObj["Then"] = thenJsonArr;
+        
+        var elseJsonArr = new JsonArray();
+        foreach (var o in ScriptActionOnFalse)
+        {
+            elseJsonArr.Add(o.ToJsonNode());
+        }
+        jsonObj["Else"] = elseJsonArr;
+
+
+        return jsonObj;
+    }
+
+    public static Script FromJsonNode(JsonNode node)
+    {
+        throw new NotImplementedException();
     }
 }

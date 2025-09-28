@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using Dreamness.Ra3.Map.Parser.Asset.Base;
 using Dreamness.Ra3.Map.Parser.Asset.Util;
 using Dreamness.Ra3.Map.Parser.Core.Base;
@@ -61,5 +62,10 @@ public class ScriptCondition: Ra3MapWritable
         {
             return Data;
         }
+    }
+
+    public JsonNode ToJsonNode()
+    {
+        return _conditionContent.ToJsonNode();
     }
 }

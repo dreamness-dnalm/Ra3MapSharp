@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using Dreamness.Ra3.Map.Parser.Asset.Base;
 using Dreamness.Ra3.Map.Parser.Asset.Collection.Dim1Array;
 using Dreamness.Ra3.Map.Parser.Asset.Collection.Property;
@@ -152,5 +153,27 @@ public class ScriptConditionContent: BaseAsset
         binaryWriter.Flush();
         
         return memoryStream.ToArray();
+    }
+
+    public JsonNode ToJsonNode()
+    {
+        throw new NotImplementedException();
+        
+        var jsonObj = new JsonObject();
+        
+        
+        // jsonObj["contentType"] = contentType;  ???????
+        jsonObj["Name"] = contentName;
+        jsonObj["enabled"] = enabled;
+        jsonObj["isInverted"] = isInverted;
+
+        var argJsonArr = new JsonArray();
+        foreach (var arg in Arguments)
+        {
+            argJsonArr.Add(arg.ToJsonNode());
+        }
+        jsonObj["Argument"] = argJsonArr;
+        
+        return jsonObj;
     }
 }

@@ -82,6 +82,14 @@ public static class AssetParser
                 asset = asset.Clone<OrCondition>();
                 (asset as OrCondition)?.ParseTolerance(context);
                 break;
+            case AssetNameConst.ScriptAction:
+                asset = asset.Clone<ScriptAction>();
+                (asset as ScriptAction)?.ParseTolerance(context);
+                break;
+            case AssetNameConst.ScriptActionFalse:
+                asset = asset.Clone<ScriptActionFalse>();
+                (asset as ScriptActionFalse)?.ParseTolerance(context);
+                break;
             
             case AssetNameConst.BlendTileData:
                 asset = asset.Clone<BlendTileDataAsset>();

@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using Dreamness.Ra3.Map.Parser.Asset.Base;
 using Dreamness.Ra3.Map.Parser.Asset.Collection.Dim1Array;
 using Dreamness.Ra3.Map.Parser.Core.Base;
@@ -35,5 +36,17 @@ public class OrCondition: BaseAsset
     protected override byte[] Deparse(BaseContext context)
     {
         return Conditions.ToBytes(context);
+    }
+
+    public JsonNode ToJsonNode()
+    {
+        var jsonArr = new JsonArray();
+
+        foreach (var o in Conditions)
+        {
+            jsonArr.Add(o.ToJsonNode());
+        }
+        
+        return jsonArr;
     }
 }

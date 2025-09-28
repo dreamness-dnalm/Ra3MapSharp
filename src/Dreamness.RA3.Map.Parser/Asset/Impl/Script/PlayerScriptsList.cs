@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using Dreamness.Ra3.Map.Parser.Asset.Base;
 using Dreamness.Ra3.Map.Parser.Asset.Collection;
 using Dreamness.Ra3.Map.Parser.Asset.Collection.Dim1Array;
@@ -62,5 +63,45 @@ public class PlayerScriptsList: BaseAsset
         asset.MarkModified();
         
         return asset;
+    }
+
+    public string ToJson(BaseContext context)
+    {
+        var sidesListAsset = (SidesListAsset)context.AssetDict[AssetNameConst.SidesList];
+
+        var playerNames = sidesListAsset.PlayerDataList.Select(p => p.Name).ToArray();
+
+        if (ScriptLists.Count > playerNames.Length)
+        {
+            throw new System.Exception("ScriptLists length should equal to player cnt.");
+        }
+
+        var jsonArray = new JsonArray();
+
+        for (int i = 0; i <= ScriptLists.Count; i++)
+        {
+            var o = ScriptLists[i].ToJsonNode();
+            ((JsonObject)o).Add("Name", playerNames[i]);
+            
+            jsonArray.Add(o);
+        }
+
+        return jsonArray.ToJsonString();
+    }
+
+    public void LoadJson(string json)
+    {
+        throw new NotImplementedException();
+        ScriptLists.Clear();
+
+        var jsonArr = (JsonArray)JsonArray.Parse(json);
+
+        foreach (var o in jsonArr)
+        {
+            var scriptListObj = o as JsonObject;
+            var name = scriptListObj["Name"];
+            // TODO 获取是第几个
+            
+        }
     }
 }

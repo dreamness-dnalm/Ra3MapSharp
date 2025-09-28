@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using Dreamness.Ra3.Map.Parser.Asset.Base;
 using Dreamness.Ra3.Map.Parser.Asset.Collection;
 using Dreamness.Ra3.Map.Parser.Asset.Collection.Dim1Array;
@@ -72,5 +73,71 @@ public class ScriptList: BaseAsset
         
         asset.MarkModified();
         return asset;
+    }
+
+    public void Add(Object o)
+    {
+        if (o is Script script)
+        {
+            Scripts.Add(script);
+        }else if (o is ScriptGroup scriptGroup)
+        {
+            ScriptGroups.Add(scriptGroup);
+        }
+        else
+        {
+            throw new InvalidDataException();
+        }
+    }
+    
+
+    public JsonNode ToJsonNode()
+    {
+        var jsonObj = new JsonObject();
+        
+        
+        var jsonArray = new JsonArray();
+
+        for (int i = 0; i < ScriptGroups.Count; i++)
+        {
+            jsonArray.Add(ScriptGroups[i].ToJsonNode());
+        }
+
+        for (int i = 0; i < Scripts.Count; i++)
+        {
+            jsonArray.Add(Scripts[i].ToJsonNode());
+        }
+        jsonObj["Content"] = jsonArray;
+        
+        return jsonObj;
+    }
+
+    public static ScriptList FromJsonNode(JsonNode node, BaseContext context)
+    {
+        var scriptList = Empty(context);
+
+        var jsonObj = node as JsonObject;
+
+        var contentArr = jsonObj["Content"] as JsonArray;
+
+        foreach (var item in contentArr)
+        {
+            var o = item as JsonObject;
+            var t = (string)o["Type"];
+            if (t == "Script")
+            {
+                scriptList.Add(Script.FromJsonNode(o));
+            }
+            else if (t == "Folder")
+            {
+                scriptList.Add(Script.FromJsonNode(o));
+            }
+            else
+            {
+                throw new InvalidDataException();
+            }
+        }
+
+        return scriptList;
     }
 }

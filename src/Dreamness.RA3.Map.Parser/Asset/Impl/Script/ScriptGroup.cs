@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using Dreamness.Ra3.Map.Parser.Asset.Base;
 using Dreamness.Ra3.Map.Parser.Asset.Collection.Dim1Array;
 using Dreamness.Ra3.Map.Parser.Asset.Util;
@@ -113,5 +114,34 @@ public class ScriptGroup: BaseAsset
         
         binaryWriter.Flush();
         return memoryStream.ToArray();
+    }
+
+    public JsonNode ToJsonNode()
+    {
+        var jsonObj = new JsonObject();
+        
+        jsonObj["Type"] = "Folder";
+        jsonObj["Name"] = Name;
+        jsonObj["IsActive"] = IsActive;
+        jsonObj["IsSubroutine"] = IsSubroutine;
+        
+        var content = new JsonArray();
+        foreach (var o in ScriptGroups)
+        {
+            content.Add(o.ToJsonNode());
+        }
+
+        foreach (var o in Scripts)
+        {
+            content.Add(o.ToJsonNode());
+        }
+        jsonObj["Content"] = content;
+        
+        return jsonObj;
+    }
+    
+    public static ScriptGroup FromJsonNode(JsonNode node)
+    {
+        throw new NotImplementedException();
     }
 }

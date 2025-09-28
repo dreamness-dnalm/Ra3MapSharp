@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using Dreamness.Ra3.Map.Parser.Asset.Base;
 using Dreamness.Ra3.Map.Parser.Core.Base;
 using Dreamness.Ra3.Map.Parser.Util;
@@ -141,5 +142,17 @@ public class ScriptArgument: Ra3MapWritable
         {
             return Data;
         }
+    }
+
+    public JsonNode ToJsonNode()
+    {
+        throw new NotImplementedException();
+
+        var jsonObj = new JsonObject();
+        jsonObj["Type"] = "????";
+        jsonObj["Value"] = "????";
+
+
+        return jsonObj;
     }
 }
