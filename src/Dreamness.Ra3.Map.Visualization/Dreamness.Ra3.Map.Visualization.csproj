@@ -5,6 +5,8 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <IsPackable>false</IsPackable>
+        <AssemblyName>Dreamness.RA3.Map.Visualization</AssemblyName>
+        <RootNamespace>Dreamness.RA3.Map.Visualization</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
