@@ -34,6 +34,8 @@ public class ObjectsListAsset: BaseAsset
         MapObjectList.Add(asset);
 
         _waypointNameSet.Add(name);
+        
+        MarkModified();
 
         maxObjectId = id;
         return asset;
@@ -78,6 +80,7 @@ public class ObjectsListAsset: BaseAsset
         
         var asset = ObjectAsset.OfObj(uniqueId, typeName, position, angle, objName, belongToTeam, context);
         MapObjectList.Add(asset);
+        MarkModified();
 
         maxObjectId = id;
         return asset;
