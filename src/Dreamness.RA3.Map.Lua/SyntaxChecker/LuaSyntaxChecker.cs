@@ -10,7 +10,7 @@ public class LuaSyntaxChecker
     /// </summary>
     /// <param name="luaCode">Lua 4.0 代码字符串</param>
     /// <returns>检查结果，包含是否通过和错误信息</returns>
-    public static SyntaxCheckResult CheckSyntax(string luaCode)
+    public static async Task<SyntaxCheckResult> CheckSyntax(string luaCode)
     {
         if (string.IsNullOrWhiteSpace(luaCode))
         {
@@ -94,7 +94,7 @@ public class LuaSyntaxChecker
     /// </summary>
     /// <param name="filePath">文件路径</param>
     /// <returns>检查结果</returns>
-    public static SyntaxCheckResult CheckFileSyntax(string filePath)
+    public static async Task<SyntaxCheckResult> CheckFileSyntax(string filePath)
     {
         if (!File.Exists(filePath))
         {
@@ -108,7 +108,7 @@ public class LuaSyntaxChecker
         try
         {
             string luaCode = File.ReadAllText(filePath);
-            var result = CheckSyntax(luaCode);
+            var result = await CheckSyntax(luaCode);
             result.FilePath = filePath;
             return result;
         }

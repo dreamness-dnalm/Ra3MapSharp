@@ -18,6 +18,6 @@ public class Tests
 
         var syntaxCheckResult = LuaSyntaxChecker.CheckSyntax(code);
         
-        Console.WriteLine(syntaxCheckResult);
+        Console.WriteLine(syntaxCheckResult.Result);
     }
 }
