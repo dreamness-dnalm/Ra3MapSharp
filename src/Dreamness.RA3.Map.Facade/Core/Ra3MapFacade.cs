@@ -20,6 +20,15 @@ public partial class Ra3MapFacade
         LoadBlendTileData();
     }
 
+    /// <summary>
+    /// 创建新地图, 地图实际尺寸 = 可游玩区域尺寸 + 2 * 边界尺寸
+    /// </summary>
+    /// <param name="playableWidth">可游玩区域宽度</param>
+    /// <param name="playableHeight">可游玩区域高度</param>
+    /// <param name="border">边界</param>
+    /// <param name="initPlayerStartWaypointCnt">初始化玩家出生点数量</param>
+    /// <param name="defaultTexture">默认纹理</param>
+    /// <returns></returns>
     public static Ra3MapFacade NewMap(int playableWidth, int playableHeight,
         int border,
         int initPlayerStartWaypointCnt = 2,
@@ -39,16 +48,32 @@ public partial class Ra3MapFacade
         return map;
     }
     
+    /// <summary>
+    /// 加载地图
+    /// </summary>
+    /// <param name="parentPath">地图所在父目录, 一般情况下请调用Ra3PathUtil.RA3MapFolder</param>
+    /// <param name="mapName">地图名字</param>
+    /// <returns></returns>
     public static Ra3MapFacade Open(string parentPath, string mapName)
     {
         return new Ra3MapFacade(Ra3Map.Open(Path.Combine(parentPath, mapName, mapName + ".map")));
     }
 
+    /// <summary>
+    /// 保存地图
+    /// </summary>
+    /// <param name="compress">是否压缩,非特殊情况请保持压缩</param>
     public void Save(bool compress = true)
     {
         ra3Map.Save(compress);
     }
 
+    /// <summary>
+    /// 另存为地图
+    /// </summary>
+    /// <param name="outputPath">输出目录</param>
+    /// <param name="mapName">地图名字</param>
+    /// <param name="compress">是否压缩,非特殊情况请保持压缩</param>
     public void SaveAs(string outputPath, string mapName, bool compress = true)
     {
         var mapFilePath = Path.Combine(outputPath, mapName, mapName + ".map");

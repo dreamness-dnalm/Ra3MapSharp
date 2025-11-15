@@ -6,7 +6,9 @@ public class UnitObjectWrap: ObjectWrap
     {
     }
     
-    
+    /// <summary>
+    /// 角度
+    /// </summary>
     public float Angle
     {
         get => Obj.Angle;
@@ -16,6 +18,9 @@ public class UnitObjectWrap: ObjectWrap
         }
     }
 
+    /// <summary>
+    /// 单位类型名称 (对应Thing)
+    /// </summary>
     public string TypeName
     {
         get => Obj.TypeName;
@@ -25,12 +30,18 @@ public class UnitObjectWrap: ObjectWrap
         }
     }
 
+    /// <summary>
+    /// 生命值
+    /// </summary>
     public int InitialHealth
     {
         get => Properties.GetProperty<int>("initialHealth");
         set =>Properties.PutProperty("initialHealth", value);
     }
 
+    /// <summary>
+    /// 可用
+    /// </summary>
     public bool Enable
     {
         get => Properties.GetProperty<bool>("objectEnabled");
@@ -43,6 +54,9 @@ public class UnitObjectWrap: ObjectWrap
         set => Properties.PutProperty("objectIndestructible", value);
     }
 
+    /// <summary>
+    /// 不可售卖
+    /// </summary>
     public bool Unsellable
     {
         get => Properties.GetProperty<bool>("objectUnsellable");
@@ -61,6 +75,9 @@ public class UnitObjectWrap: ObjectWrap
         set => Properties.PutProperty("objectRecruitableAI", value);
     }
     
+    /// <summary>
+    /// 为有效目标
+    /// </summary>
     public bool Targetable
     {
         get => Properties.GetProperty<bool>("objectTargetable");
@@ -91,6 +108,9 @@ public class UnitObjectWrap: ObjectWrap
         set => Properties.PutProperty("originalOwner", value);
     }
     
+    /// <summary>
+    /// 单位名称
+    /// </summary>
     public string ObjName
     {
         get => Properties.GetProperty<string>("objectName", "");

@@ -1,5 +1,8 @@
 namespace Dreamness.Ra3.Map.Facade.enums;
 
+/// <summary>
+/// 纹理枚举
+/// </summary>
 public enum TextureEnum
 {
     // Romania

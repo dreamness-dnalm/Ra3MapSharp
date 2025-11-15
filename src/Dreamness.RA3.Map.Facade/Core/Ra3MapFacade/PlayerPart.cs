@@ -11,22 +11,39 @@ public partial class Ra3MapFacade
 {
     private SidesListAsset _sideListAsset;
     
+    /// <summary>
+    /// 获取所有玩家数据
+    /// </summary>
+    /// <returns></returns>
     public List<PlayerData> GetPlayers()
     {
         return _sideListAsset.PlayerDataList.ToList();
     }
     
+    /// <summary>
+    /// 将玩家数据导出为 JSON 字符串
+    /// </summary>
+    /// <returns></returns>
     public string ExportPlayersToJsonStr()
     {
         return ra3Map.Context.ExportSidesListAssetToJson();
     }
     
+    /// <summary>
+    /// 从 JSON 字符串导入玩家数据
+    /// </summary>
+    /// <param name="jsonStr"></param>
     public void ImportPlayersFromJsonStr(string jsonStr)
     {
         ra3Map.Context.ImportSidesListAssetFromJson(jsonStr);
         LoadPlayer();
     }
     
+    /// <summary>
+    /// 添加玩家
+    /// </summary>
+    /// <param name="playerName">玩家名字</param>
+    /// <returns></returns>
     public PlayerData AddPlayer(string playerName)
     {
         var playerData = PlayerData.Of(playerName, ra3Map.Context);
@@ -34,6 +51,11 @@ public partial class Ra3MapFacade
         return playerData;
     }
 
+    /// <summary>
+    /// 根据玩家名称获取玩家数据
+    /// </summary>
+    /// <param name="playerName">玩家名称</param>
+    /// <returns></returns>
     public PlayerData GetPlayer(string playerName)
     {
         var playerDatas = GetPlayers().Where(p => p.Name == playerName).ToList();

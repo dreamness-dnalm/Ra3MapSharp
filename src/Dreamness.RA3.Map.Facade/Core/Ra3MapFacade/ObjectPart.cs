@@ -33,6 +33,10 @@ public partial class Ra3MapFacade
         }
     }
 
+    /// <summary>
+    /// 移除指定 UniqueId 的物体/路径点
+    /// </summary>
+    /// <param name="uniqueId"></param>
     public void RemoveByUniqueId(string uniqueId)
     {
         var o = GetObjectByUniqueId(uniqueId);
@@ -42,6 +46,12 @@ public partial class Ra3MapFacade
         }
     }
 
+    /// <summary>
+    /// 移除物体/路径点
+    /// </summary>
+    /// <param name="o"></param>
+    /// <exception cref="ArgumentNullException"></exception>
+    /// <exception cref="ArgumentException"></exception>
     public void Remove(object o)
     {
         if (o == null)
@@ -70,7 +80,10 @@ public partial class Ra3MapFacade
     
     // ---------- objects ----------------
 
-    
+    /// <summary>
+    /// 获取所有单位物体
+    /// </summary>
+    /// <returns></returns>
     public List<UnitObjectWrap> GetUnitObjects()
     {
         return GetAllObjects()
@@ -79,6 +92,14 @@ public partial class Ra3MapFacade
             .ToList();
     }
     
+    /// <summary>
+    /// 添加单位物体
+    /// </summary>
+    /// <param name="typeName">单位类型名称, 坐标使用世界坐标</param>
+    /// <param name="x">X 坐标</param>
+    /// <param name="y">Y 坐标</param>
+    /// <param name="z">Z 坐标</param>
+    /// <returns></returns>
     public UnitObjectWrap AddUnitObject(string typeName, float x, float y, float z = 0)
     {
         var o = _objectsList.AddObj(ra3Map.Context, typeName, new Vec3D(x, y, z));
@@ -87,6 +108,10 @@ public partial class Ra3MapFacade
     
     // ------------- waypoint ----------------
 
+    /// <summary>
+    /// 获取所有路径点
+    /// </summary>
+    /// <returns></returns>
     public List<WaypointWrap> GetWaypoints()
     {
         return GetAllObjects()
@@ -95,18 +120,41 @@ public partial class Ra3MapFacade
             .ToList();
     }
     
+    /// <summary>
+    /// 添加路径点, 指定名称, 坐标使用世界坐标
+    /// </summary>
+    /// <param name="name"></param>
+    /// <param name="x"></param>
+    /// <param name="y"></param>
+    /// <param name="z"></param>
+    /// <returns></returns>
     public WaypointWrap AddWaypoint(string name, float x, float y, float z = 0)
     {
         var o = _objectsList.AddWaypoint(name, new Vec3D(x, y, z), ra3Map.Context);
         return WaypointWrap.Of(o) as WaypointWrap;
     }
 
+    /// <summary>
+    /// 添加路径点, 坐标使用世界坐标
+    /// </summary>
+    /// <param name="x"></param>
+    /// <param name="y"></param>
+    /// <param name="z"></param>
+    /// <returns></returns>
     public WaypointWrap AddWaypoint(float x, float y, float z = 0)
     {
         var o = _objectsList.AddWaypoint(new Vec3D(x, y, z), ra3Map.Context);
         return WaypointWrap.Of(o) as WaypointWrap;
     }
     
+    /// <summary>
+    /// 添加玩家起始点路径点, 坐标使用世界坐标
+    /// </summary>
+    /// <param name="playerIndex"></param>
+    /// <param name="x"></param>
+    /// <param name="y"></param>
+    /// <param name="z"></param>
+    /// <returns></returns>
     public WaypointWrap AddPlayerStartWaypoint(int playerIndex, float x, float y, float z = 0)
     {
         var o = _objectsList.AddPlayerStartWaypoint(playerIndex, new Vec3D(x, y, z), ra3Map.Context);

@@ -7,9 +7,10 @@
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <AssemblyName>Dreamness.RA3.Map.Parser</AssemblyName>
         <RootNamespace>Dreamness.RA3.Map.Parser</RootNamespace>
-        
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <PackageId>Dreamness.RA3.Map.Parser</PackageId>
         <Description>A parser for ra3 map.</Description>
+        <NoWarn>1591</NoWarn>
         
     </PropertyGroup>
 

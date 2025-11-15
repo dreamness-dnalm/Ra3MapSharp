@@ -97,6 +97,12 @@ public class PlayerData: Ra3MapWritable
         
     }
 
+    /// <summary>
+    /// 新建玩家数据对象
+    /// </summary>
+    /// <param name="playerName"></param>
+    /// <param name="context"></param>
+    /// <returns></returns>
     public static PlayerData OfForDefault(string playerName, BaseContext context)
     {
         // TODO: review code
@@ -173,6 +179,10 @@ public class PlayerData: Ra3MapWritable
                '}';
     }
     
+    /// <summary>
+    /// 玩家名
+    /// </summary>
+    /// <exception cref="NullReferenceException"></exception>
     [JsonInclude]
     public string Name
     {

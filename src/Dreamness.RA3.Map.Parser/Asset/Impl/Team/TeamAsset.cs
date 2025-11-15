@@ -83,6 +83,13 @@ public class TeamAsset: Ra3MapWritable
         return teamAsset;
     }
 
+    /// <summary>
+    /// 新建TeamAsset对象
+    /// </summary>
+    /// <param name="teamName">队伍名(短)</param>
+    /// <param name="ownerPlayerName">所有者的玩家名</param>
+    /// <param name="context"></param>
+    /// <returns></returns>
     public static TeamAsset Of(string teamName, string ownerPlayerName, BaseContext context)
     {
         var teamAsset = new TeamAsset();
@@ -115,6 +122,11 @@ public class TeamAsset: Ra3MapWritable
     // -------------------------------
     // ----------- Identify --------------------
     // -------------------------------
+    
+    /// <summary>
+    /// 队伍名(短)
+    /// </summary>
+    /// <exception cref="ArgumentNullException"></exception>
     [JsonIgnore]
     public string Name
     {
@@ -130,6 +142,10 @@ public class TeamAsset: Ra3MapWritable
         }
     }
 
+    /// <summary>
+    /// 所有者的玩家名
+    /// </summary>
+    /// <exception cref="ArgumentNullException"></exception>
     [JsonIgnore]
     public string OwnerPlayerName
     {
@@ -144,7 +160,7 @@ public class TeamAsset: Ra3MapWritable
             Properties.PutProperty("teamOwner", value);
         }
     }
-
+    
     public bool IsSingleton
     {
         get => Properties.GetProperty<bool>("teamIsSingleton");
@@ -159,6 +175,10 @@ public class TeamAsset: Ra3MapWritable
         }
     }
 
+    /// <summary>
+    /// 队伍全名，格式为 "OwnerPlayerName/Name"
+    /// </summary>
+    /// <exception cref="ArgumentException"></exception>
     public string FullName
     {
         get => OwnerPlayerName + "/" + Name;

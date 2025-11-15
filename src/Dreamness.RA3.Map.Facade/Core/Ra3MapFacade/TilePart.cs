@@ -9,21 +9,39 @@ public partial class Ra3MapFacade
     
     private BlendTileDataAsset _blendTileData { get; set; }
     
+    /// <summary>
+    /// 获取指定坐标的地形纹理名称, 使用网格坐标
+    /// </summary>
+    /// <param name="x"></param>
+    /// <param name="y"></param>
+    /// <returns>枚举值参考TextureEnum</returns>
     public string GetTileTexture(int x, int y)
     {
         return _blendTileData.GetTextureName(x, y);
     }
-    
+   
+    /// <summary>
+    /// 设置指定坐标的地形纹理名称, 使用网格坐标
+    /// </summary>
+    /// <param name="x"></param>
+    /// <param name="y"></param>
+    /// <param name="texture">枚举值参考TextureEnum</param>
     public void SetTileTexture(int x, int y, string texture)
     {
         _blendTileData.SetTileTexture(x, y, texture, ra3Map.Context);
     }
 
+    /// <summary>
+    /// 注册支持的地形纹理
+    /// </summary>
+    /// <param name="textureName"></param>
+    /// <param name="tgaFileName"></param>
+    /// <param name="nrmFileName"></param>
     public void RegisterSupportedTexture(string textureName, string tgaFileName, string nrmFileName)
     {
         _worldInfoAsset.RegisterSupportedTexture(textureName, tgaFileName, nrmFileName);
     }
-
+    
     public ushort GetTileBlend(int x, int y)
     {
         return _blendTileData.Blends[x, y];
@@ -107,16 +125,31 @@ public partial class Ra3MapFacade
     
     // ---------- passability ----------------
     
+    /// <summary>
+    /// 设置指定坐标的地形通行属性, 使用网格坐标
+    /// </summary>
+    /// <param name="x"></param>
+    /// <param name="y"></param>
+    /// <param name="passability">枚举值参考Passability</param>
     public void SetPassability(int x, int y, string passability)
     {
         _blendTileData.Passabilities[x, y] = Enum.Parse<BlendTileDataAsset.Passability>(passability, true);
     }
     
+    /// <summary>
+    /// 获取指定坐标的地形通行属性, 使用网格坐标
+    /// </summary>
+    /// <param name="x"></param>
+    /// <param name="y"></param>
+    /// <returns>枚举值参考Passability</returns>
     public string GetPassability(int x, int y)
     {
         return _blendTileData.Passabilities[x, y].ToString();
     }
     
+    /// <summary>
+    /// 根据高度信息, 更新地图的通行属性数据, 建议在修改完高度图后调用
+    /// </summary>
     public void UpdatePassabilityMap()
     {
         _blendTileData.UpdatePassabilityMap(ra3Map.Context);

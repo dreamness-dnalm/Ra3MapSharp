@@ -12,6 +12,9 @@ public abstract class ObjectWrap
         Obj = obj;
     }
 
+    /// <summary>
+    /// 物体位置坐标 (世界坐标)
+    /// </summary>
     public Vec3D Position
     {
         get => Obj.Position;

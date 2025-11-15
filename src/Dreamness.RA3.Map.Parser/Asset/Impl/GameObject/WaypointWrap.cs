@@ -6,12 +6,18 @@ public class WaypointWrap: ObjectWrap
     {
     }
     
+    /// <summary>
+    /// 路径点ID
+    /// </summary>
     public int WaypointID
     {
         get => Properties.GetProperty<int>("waypointID");
         set => Properties.PutProperty("waypointID", value);
     }
     
+    /// <summary>
+    /// 路径点名称
+    /// </summary>
     // TODO: 检测是否重复? 是否要修改uniqueid
     public string WaypointName
     {
@@ -23,6 +29,9 @@ public class WaypointWrap: ObjectWrap
     
     // TODO: 解析枚举 waypointType
     
+    /// <summary>
+    /// 路径点类型
+    /// </summary>
     public int WaypointType
     {
         get => Properties.GetProperty<int>("waypointType");
