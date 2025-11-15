@@ -7,6 +7,8 @@
         <IsPackable>false</IsPackable>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <NoWarn>1591</NoWarn>
+        <AssemblyName>Dreamness.RA3.Map.Visualization</AssemblyName>
+        <RootNamespace>Dreamness.RA3.Map.Visualization</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>

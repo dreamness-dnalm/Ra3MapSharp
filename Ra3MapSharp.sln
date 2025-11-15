@@ -16,6 +16,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dreamness.Ra3.Map.Visualiza
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dreamness.Ra3.Map.Visualization.Test", "test\Dreamness.Ra3.Map.Visualization.Test\Dreamness.Ra3.Map.Visualization.Test.csproj", "{B23D085F-5557-4DE5-AE02-F441E7467112}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dreamness.RA3.Map.Lua", "src\Dreamness.RA3.Map.Lua\Dreamness.RA3.Map.Lua.csproj", "{FAB855D7-86C6-460F-B1B5-181E03237FF7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dreamness.RA3.Map.Lua.Test", "test\Dreamness.RA3.Map.Lua.Test\Dreamness.RA3.Map.Lua.Test.csproj", "{8B0906C0-17C6-408F-A5D1-8CE001324B1A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -66,5 +70,13 @@ Global
 		{B23D085F-5557-4DE5-AE02-F441E7467112}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B23D085F-5557-4DE5-AE02-F441E7467112}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B23D085F-5557-4DE5-AE02-F441E7467112}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FAB855D7-86C6-460F-B1B5-181E03237FF7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FAB855D7-86C6-460F-B1B5-181E03237FF7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FAB855D7-86C6-460F-B1B5-181E03237FF7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FAB855D7-86C6-460F-B1B5-181E03237FF7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8B0906C0-17C6-408F-A5D1-8CE001324B1A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8B0906C0-17C6-408F-A5D1-8CE001324B1A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8B0906C0-17C6-408F-A5D1-8CE001324B1A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8B0906C0-17C6-408F-A5D1-8CE001324B1A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
