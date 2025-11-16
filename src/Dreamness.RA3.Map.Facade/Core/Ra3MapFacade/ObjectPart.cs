@@ -42,12 +42,12 @@ public partial class Ra3MapFacade
         var o = GetObjectByUniqueId(uniqueId);
         if (o != null)
         {
-            _objectsList.MapObjectList.Remove(o);
+            _objectsList.Remove(o);
         }
     }
 
     /// <summary>
-    /// 移除物体/路径点
+    /// 移除物体/路径点/玩家/队伍
     /// </summary>
     /// <param name="o"></param>
     /// <exception cref="ArgumentNullException"></exception>

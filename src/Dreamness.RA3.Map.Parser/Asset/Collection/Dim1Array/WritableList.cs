@@ -46,6 +46,7 @@ public class WritableList<T>: Ra3MapWritable, IEnumerable<T> where T:Ra3MapWrita
         {
             Remove(_assets[i]);
         }
+        MarkModified();
     }
     
     public List<T> GetAssets()

@@ -85,6 +85,20 @@ public class ObjectsListAsset: BaseAsset
         maxObjectId = id;
         return asset;
     }
+    
+    public void Remove(ObjectAsset asset)
+    {
+        if (asset.IsWaypoint)
+        {
+            _waypointNameSet.Remove(asset.UniqueId);
+        }
+        else
+        {
+            _uniqueIdSet.Remove(asset.UniqueId);
+        }
+        MapObjectList.Remove(asset);
+        MarkModified();
+    }
 
     public void Add(ObjectAsset asset, bool autoId)
     {
