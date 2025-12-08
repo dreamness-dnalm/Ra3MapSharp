@@ -15,6 +15,7 @@ public class Tests
     public void Test1()
     {
         var ra3MapFacade = Ra3MapFacade.Open(Ra3PathUtil.RA3MapFolder, "csharp_script_test");
+        // ra3MapFacade.map
 
         var baseAsset = ra3MapFacade.ra3Map.Context.AssetDict[AssetNameConst.PlayerScriptsList];
         
