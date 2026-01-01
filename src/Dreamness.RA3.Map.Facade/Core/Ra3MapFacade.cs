@@ -56,7 +56,17 @@ public partial class Ra3MapFacade
     /// <returns></returns>
     public static Ra3MapFacade Open(string parentPath, string mapName)
     {
-        return new Ra3MapFacade(Ra3Map.Open(Path.Combine(parentPath, mapName, mapName + ".map")));
+        return Open(Path.Combine(parentPath, mapName, mapName + ".map"));
+    }
+    
+    /// <summary>
+    /// 加载地图
+    /// </summary>
+    /// <param name="mapFilePath">地图文件路径</param>
+    /// <returns></returns>
+    public static Ra3MapFacade Open(string mapFilePath)
+    {
+        return new Ra3MapFacade(Ra3Map.Open(mapFilePath));
     }
 
     /// <summary>
@@ -77,6 +87,17 @@ public partial class Ra3MapFacade
     public void SaveAs(string outputPath, string mapName, bool compress = true)
     {
         var mapFilePath = Path.Combine(outputPath, mapName, mapName + ".map");
+        SaveAs(mapFilePath, compress);
+        
+    }
+
+    /// <summary>
+    /// 另存为地图
+    /// </summary>
+    /// <param name="mapFilePath">地图文件路径</param>
+    /// <param name="compress">是否压缩,非特殊情况请保持压缩</param>
+    public void SaveAs(string mapFilePath, bool compress = true)
+    {
         ra3Map.SaveAs(mapFilePath, compress);
     }
 
