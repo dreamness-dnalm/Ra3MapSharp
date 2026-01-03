@@ -1,4 +1,5 @@
 using Dreamness.Ra3.Map.Parser.Asset.Impl.GameObject;
+using Dreamness.RA3.Map.Parser.Asset.Impl.MissionObjective;
 using Dreamness.Ra3.Map.Parser.Asset.Impl.Player;
 using Dreamness.Ra3.Map.Parser.Asset.Impl.Team;
 using Dreamness.Ra3.Map.Parser.Util;
@@ -70,6 +71,14 @@ public partial class Ra3MapFacade
         else if (o is TeamAsset teamAsset)
         {
             _teamsAsset.TeamList.Remove(teamAsset);
+        }
+        else if (o is MissionObjective missionObjective)
+        {
+            if (_missionObjectivesAsset == null)
+            {
+                return;
+            }
+            _missionObjectivesAsset.Remove(missionObjective);
         }
         else
         {

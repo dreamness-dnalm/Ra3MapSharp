@@ -229,6 +229,14 @@ public class AssetProperties: Ra3MapWritable
         }
     }
     
+    public AssetProperties Clone()
+    {
+        var bytes = this.ToBytes(this.context);
+        using var memoryStream = new MemoryStream(bytes);
+        using var binaryReader = new BinaryReader(memoryStream);
+        return FromBinaryReader(binaryReader, context);
+    }
+    
 
     public override byte[] ToBytes(BaseContext context)
     {

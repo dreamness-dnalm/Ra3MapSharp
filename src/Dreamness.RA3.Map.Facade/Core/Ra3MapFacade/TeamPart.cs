@@ -48,6 +48,19 @@ public partial class Ra3MapFacade
     {
         var teamAsset = TeamAsset.Of(teamName, owerPlayerName, ra3Map.Context);
         _teamsAsset.TeamList.Add(teamAsset);
+        _teamsAsset.MarkModified();
+        return teamAsset;
+    }
+    
+    /// <summary>
+    /// 添加一个队伍
+    /// </summary>
+    /// <param name="teamAsset">队伍数据</param>
+    /// <returns></returns>
+    public TeamAsset AddTeam(TeamAsset teamAsset)
+    {
+        _teamsAsset.TeamList.Add(teamAsset);
+        _teamsAsset.MarkModified();
         return teamAsset;
     }
     

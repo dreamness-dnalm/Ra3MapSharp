@@ -1,6 +1,7 @@
 using Dreamness.Ra3.Map.Parser.Asset.Base;
 using Dreamness.Ra3.Map.Parser.Asset.Impl.Default;
 using Dreamness.Ra3.Map.Parser.Asset.Impl.GameObject;
+using Dreamness.RA3.Map.Parser.Asset.Impl.MissionObjective;
 using Dreamness.Ra3.Map.Parser.Asset.Impl.Player;
 using Dreamness.Ra3.Map.Parser.Asset.Impl.Script;
 using Dreamness.Ra3.Map.Parser.Asset.Impl.Team;
@@ -89,6 +90,10 @@ public static class AssetParser
             case AssetNameConst.ScriptActionFalse:
                 asset = asset.Clone<ScriptActionFalse>();
                 (asset as ScriptActionFalse)?.ParseTolerance(context);
+                break;
+            case AssetNameConst.MissionObjectives:
+                asset = asset.Clone<MissionObjectivesAsset>();
+                (asset as MissionObjectivesAsset)?.ParseTolerance(context);
                 break;
             
             case AssetNameConst.BlendTileData:

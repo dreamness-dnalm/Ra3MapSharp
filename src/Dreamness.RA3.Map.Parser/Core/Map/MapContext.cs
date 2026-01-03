@@ -1,6 +1,7 @@
 using Dreamness.Ra3.Map.Parser.Asset;
 using Dreamness.Ra3.Map.Parser.Asset.Base;
 using Dreamness.Ra3.Map.Parser.Asset.Impl.GameObject;
+using Dreamness.RA3.Map.Parser.Asset.Impl.MissionObjective;
 using Dreamness.Ra3.Map.Parser.Asset.Impl.Player;
 using Dreamness.Ra3.Map.Parser.Asset.Impl.Team;
 using Dreamness.Ra3.Map.Parser.Asset.Impl.Terrain;
@@ -51,5 +52,21 @@ public class MapContext: BaseContext
     
     public ObjectsListAsset ObjectsListAsset => AssetDict[AssetNameConst.ObjectsList] as ObjectsListAsset;
     
+    public MissionObjectivesAsset MissionObjectivesAsset
+    {
+        get
+        {
+            if (AssetDict.ContainsKey(AssetNameConst.MissionObjectives))
+            {
+                return AssetDict[AssetNameConst.MissionObjectives] as MissionObjectivesAsset;
+            }
+            else
+            {
+                return null;
+            }
+            
+        }
+    }
+
     // public ObjectsListAsset ObjectsListAsset => AssetDict[AssetConst.ObjectsList] as ObjectsListAsset;
 }

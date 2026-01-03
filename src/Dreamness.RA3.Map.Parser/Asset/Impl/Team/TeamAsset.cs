@@ -102,7 +102,7 @@ public class TeamAsset: Ra3MapWritable
         };
 
         teamAsset.Properties = AssetProperties.FromDict(dict, context);
-        ObservableUtil.Subscribe(teamAsset, teamAsset.Properties);
+        ObservableUtil.Subscribe(teamAsset.Properties, teamAsset);
         teamAsset.MarkModified();
         return teamAsset;
     }
@@ -117,6 +117,14 @@ public class TeamAsset: Ra3MapWritable
         {
             return Data;
         }
+    }
+    
+    public TeamAsset Clone()
+    {
+        var cloned = new TeamAsset();
+        cloned.Properties = this.Properties.Clone();
+        ObservableUtil.Subscribe(cloned.Properties, cloned);
+        return cloned;
     }
     
     // -------------------------------

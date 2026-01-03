@@ -48,6 +48,19 @@ public partial class Ra3MapFacade
     {
         var playerData = PlayerData.Of(playerName, ra3Map.Context);
         _sideListAsset.PlayerDataList.Add(playerData);
+        _sideListAsset.MarkModified();
+        return playerData;
+    }
+    
+    /// <summary>
+    /// 添加玩家
+    /// </summary>
+    /// <param name="playerData">玩家数据</param>
+    /// <returns></returns>
+    public PlayerData AddPlayer(PlayerData playerData)
+    {
+        _sideListAsset.PlayerDataList.Add(playerData);
+        _sideListAsset.MarkModified();
         return playerData;
     }
 

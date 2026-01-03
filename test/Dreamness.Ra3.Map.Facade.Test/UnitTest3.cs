@@ -2,6 +2,7 @@ using System.Text;
 using Dreamness.Ra3.Map.Facade.Core;
 using Dreamness.Ra3.Map.Facade.Util;
 using Dreamness.Ra3.Map.Parser.Asset.Base;
+using Dreamness.RA3.Map.Parser.Asset.Impl.MissionObjective;
 using Dreamness.Ra3.Map.Parser.Asset.Impl.Unknown;
 
 namespace Dreamness.Ra3.Map.Facade.Test;
@@ -9,30 +10,58 @@ namespace Dreamness.Ra3.Map.Facade.Test;
 public class UnitTest3
 {
     [Test]
-    public void DeleteObj()
+    public void analyse_struct()
     {
-        var mapName = "the_train_0_1_dev";
         
-        var map1 = Ra3MapFacade.Open(Ra3PathUtil.RA3MapFolder, "the_train_0_1_dev");
-        var map2 = Ra3MapFacade.Open(Ra3PathUtil.RA3MapFolder, "the_train_0_1_dev_2");
+        var map1 = Ra3MapFacade.Open(Ra3PathUtil.RA3MapFolder, "obj_3");
+        var map2 = Ra3MapFacade.Open(Ra3PathUtil.RA3MapFolder, "obj_2");
 
-        // Console.WriteLine("map1 asset cnt: " + map1.ra3Map.Context.AssetDict.Count);
-        // Console.WriteLine("map2 asset cnt: " + map1.ra3Map.Context.AssetDict.Count);
+        var m1Dict = map1.ra3Map.Context.AssetDict;
+        var m2Dict = map2.ra3Map.Context.AssetDict;
 
-        var map1_assetListAsset = map1.ra3Map.Context.AssetDict[AssetNameConst.AssetList] as AssetListAsset;
-        var map2_assetListAsset = map2.ra3Map.Context.AssetDict[AssetNameConst.AssetList] as AssetListAsset;
+        Console.WriteLine("map1 asset cnt: " + m1Dict.Count);
+        Console.WriteLine("map2 asset cnt: " + m2Dict.Count);
 
-        var map2Objs = map2.GetUnitObjects();
+        var m1MissionObjectives = m1Dict["MissionObjectives"] as MissionObjectivesAsset;
+        var m2MissionObjectives = m2Dict["MissionObjectives"] as MissionObjectivesAsset;
+        
+        Console.WriteLine("m1MissionObjectives.DataSize: " + m1MissionObjectives.DataSize);
+        Console.WriteLine("m2MissionObjectives.DataSize: " + m2MissionObjectives.DataSize);
 
-        foreach (var map2Obj in map2Objs)
-        {
-            if (map2Obj.UniqueId.StartsWith("AlliedPowerPlant"))
-            {
-                continue;
-            }
-            Console.WriteLine(map2Obj.UniqueId + "|" + map2Obj.Position);
-            
-        }
+        // foreach (var p in m2Dict)
+        // {
+        //     var assetName = p.Key;
+        //     
+        //     var m1Len = -1;
+        //     var m2Len = p.Value.DataSize;
+        //     if (m1Dict.ContainsKey(assetName))
+        //     {
+        //         m1Len = m1Dict[assetName].DataSize;
+        //     }
+        //
+        //     if (m1Len != m2Len)
+        //     {
+        //         Console.WriteLine("assetName: " + assetName + "---------------");
+        //         Console.WriteLine("m1.len: " + m1Len);
+        //         Console.WriteLine("m2.len: " + m2Len);
+        //     }
+        //
+        // }
+
+        // var map1_assetListAsset = map1.ra3Map.Context.AssetDict[AssetNameConst.AssetList] as AssetListAsset;
+        // var map2_assetListAsset = map2.ra3Map.Context.AssetDict[AssetNameConst.AssetList] as AssetListAsset;
+        //
+        // var map2Objs = map2.GetUnitObjects();
+        //
+        // foreach (var map2Obj in map2Objs)
+        // {
+        //     if (map2Obj.UniqueId.StartsWith("AlliedPowerPlant"))
+        //     {
+        //         continue;
+        //     }
+        //     Console.WriteLine(map2Obj.UniqueId + "|" + map2Obj.Position);
+        //     
+        // }
 
 
         // foreach (var assetName in map2.ra3Map.Context.AssetDict.Keys)
