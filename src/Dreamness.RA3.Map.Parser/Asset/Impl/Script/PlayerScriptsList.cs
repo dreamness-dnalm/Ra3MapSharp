@@ -78,7 +78,7 @@ public class PlayerScriptsList: BaseAsset
 
         var jsonArray = new JsonArray();
 
-        for (int i = 0; i <= ScriptLists.Count; i++)
+        for (int i = 0; i < ScriptLists.Count; i++)
         {
             var o = ScriptLists[i].ToJsonNode();
             ((JsonObject)o).Add("Name", playerNames[i]);
@@ -86,7 +86,8 @@ public class PlayerScriptsList: BaseAsset
             jsonArray.Add(o);
         }
 
-        return jsonArray.ToJsonString();
+        return JsonUtil.Serialize(jsonArray);
+        // return jsonArray.ToJsonString();
     }
 
     public void LoadJson(string json)

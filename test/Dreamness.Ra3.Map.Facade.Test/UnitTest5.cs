@@ -1,5 +1,7 @@
+using System.Reflection;
 using Dreamness.Ra3.Map.Facade.Core;
 using Dreamness.Ra3.Map.Facade.Util;
+using Dreamness.Ra3.Map.Parser.Util;
 
 namespace Dreamness.Ra3.Map.Facade.Test;
 
@@ -8,15 +10,22 @@ public class UnitTest5
     [Test]
     public void Team_CloneAndAdd()
     {
-        var ra3map = Ra3MapFacade.Open(Ra3PathUtil.RA3MapFolder, "NewMap6");
+        var ra3map = Ra3MapFacade.Open(Ra3PathUtil.RA3MapFolder, "zh_test_02");
+        var properties = ra3map.ra3Map.Context.TeamsAsset.TeamList[23].Properties;
 
-        var teams = ra3map.GetTeams();
-        foreach (var teamAsset in teams)
-        {
-            Console.WriteLine(teamAsset.FullName);
-        }
+        var t = properties.GetType();
+
         
-        Console.WriteLine("-----------------");
+        
+        // byte[] data = properties.Data;
+        // Console.WriteLine("Team FullName: " + fullName);
+        // var teams = ra3map.GetTeams();
+        // foreach (var teamAsset in teams)
+        // {
+        //     Console.WriteLine(teamAsset.FullName);
+        // }
+        //
+        // Console.WriteLine("-----------------");
         // var teamTemplate = teams.Where(t => t.FullName == "Player_1/template_team").First();
         // for(int i = 1; i <= 5; i ++)
         // {
@@ -38,4 +47,22 @@ public class UnitTest5
         //
         
     }
+
+    [Test]
+    public void ReadBytesFile()
+    {
+        var filePath = "e:/hao.bin";
+        var data = System.IO.File.ReadAllBytes(filePath);
+        // var memoryStream = new MemoryStream(data);
+        // var binaryReader = new BinaryReader(memoryStream);
+        //
+        // while (binaryReader.BaseStream.Position != binaryReader.BaseStream.Length)
+        // {
+        //     var b = binaryReader.ReadByte();
+        //     Console.Write(Convert.ToHexString() + " ");
+        // }
+        Console.WriteLine(Convert.ToHexString(data));
+    }
+    
+
 }

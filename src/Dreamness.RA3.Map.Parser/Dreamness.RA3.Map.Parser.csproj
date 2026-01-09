@@ -18,4 +18,13 @@
         <PackageReference Include="System.Text.Json" Version="8.0.5" />
     </ItemGroup>
 
+    <ItemGroup>
+      <None Update="data\script_declare\ScriptAction.json">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="data\script_declare\ScriptConditon.json">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
+
 </Project>

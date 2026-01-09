@@ -5,10 +5,19 @@ namespace Dreamness.Ra3.Map.Parser.Util;
 
 public static class StreamExtension
 {
+    static StreamExtension()
+    {
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        gbkEncoding = Encoding.GetEncoding("GBK");
+    }
+    
+    private static Encoding gbkEncoding = null;
+    
     public static string ReadDefaultString(this BinaryReader br)
     {
         ushort len = br.ReadUInt16();
-        return Encoding.Default.GetString(br.ReadBytes(len));
+        // return Encoding.Default.GetString(br.ReadBytes(len));
+        return gbkEncoding.GetString(br.ReadBytes(len));
     }
     
     public static string ReadUnicodeString(this BinaryReader br)
@@ -40,14 +49,21 @@ public static class StreamExtension
     
     public static void WriteDefaultString(this BinaryWriter bw, string str)
     {
-        bw.Write((ushort)str.Length);
-        bw.Write(Encoding.Default.GetBytes(str));
+        var bytes = gbkEncoding.GetBytes(str);
+
+        bw.Write((ushort)bytes.Length);
+        // bw.Write(Encoding.Default.GetBytes(str));
+        bw.Write(bytes);
     }
     
     public static void WriteUnicodeString(this BinaryWriter bw, string str)
     {
-        bw.Write((ushort)str.Length);
-        bw.Write(Encoding.Unicode.GetBytes(str));
+        // bw.Write((ushort)str.Length);
+        // bw.Write(Encoding.Unicode.GetBytes(str));
+        
+        var bytes = Encoding.Unicode.GetBytes(str);
+        bw.Write((ushort)(bytes.Length / 2));
+        bw.Write(bytes);
     }
     
     public static void WriteVec3D(this BinaryWriter bw, Vec3D vec3D, BaseContext context)

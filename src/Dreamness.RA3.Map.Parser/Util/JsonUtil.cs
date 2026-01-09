@@ -1,4 +1,5 @@
 using System.ComponentModel.Design.Serialization;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using Dreamness.Ra3.Map.Parser.Asset.SubAsset;
 
@@ -10,6 +11,7 @@ public class JsonUtil
     {
         return System.Text.Json.JsonSerializer.Serialize(obj, new System.Text.Json.JsonSerializerOptions
         {
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
             WriteIndented = true
         });
     }

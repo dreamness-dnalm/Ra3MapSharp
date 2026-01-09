@@ -157,12 +157,12 @@ public class ScriptConditionContent: BaseAsset
 
     public JsonNode ToJsonNode()
     {
-        throw new NotImplementedException();
+        // throw new NotImplementedException();
         
         var jsonObj = new JsonObject();
         
         
-        // jsonObj["contentType"] = contentType;  ???????
+        jsonObj["contentType"] = contentType; // todo remove ???????
         jsonObj["Name"] = contentName;
         jsonObj["enabled"] = enabled;
         jsonObj["isInverted"] = isInverted;

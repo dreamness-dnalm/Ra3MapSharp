@@ -144,15 +144,33 @@ public class ScriptArgument: Ra3MapWritable
         }
     }
 
-    public JsonNode ToJsonNode()
+    public string ToJsonNode()
     {
-        throw new NotImplementedException();
+        // throw new NotImplementedException();
 
-        var jsonObj = new JsonObject();
-        jsonObj["Type"] = "????";
-        jsonObj["Value"] = "????";
-
-
-        return jsonObj;
+        // var jsonObj = new JsonObject();
+        // jsonObj["Type"] = "????";
+        // jsonObj["Value"] = "????";
+        // public static string INT = "Int32";
+        // public static string FLOAT = "Double";
+        // public static string STRING = "String";
+        // public static string POSITION = "Vec3D";
+        
+        // todo argumentType?
+        
+        switch (ArgumentType)
+        {
+            // case 2:
+            //     return IntValue.ToString();
+            // case 4:
+            //     return FloatValue.ToString();
+            // case 8:
+            //     return StringValue;
+            case 16:
+                return $"{Position.X},{Position.Y},{Position.Z}";
+            default:
+                return IntValue.ToString();
+                // throw new InvalidDataException($"Unexpected ArgumentType in ScriptArgument: {ArgumentType}");
+        }
     }
 }

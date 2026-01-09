@@ -3,6 +3,7 @@ using Dreamness.Ra3.Map.Parser.Asset.Base;
 using Dreamness.Ra3.Map.Parser.Asset.Impl.GameObject;
 using Dreamness.RA3.Map.Parser.Asset.Impl.MissionObjective;
 using Dreamness.Ra3.Map.Parser.Asset.Impl.Player;
+using Dreamness.Ra3.Map.Parser.Asset.Impl.Script;
 using Dreamness.Ra3.Map.Parser.Asset.Impl.Team;
 using Dreamness.Ra3.Map.Parser.Asset.Impl.Terrain;
 using Dreamness.Ra3.Map.Parser.Asset.Impl.Texture;
@@ -67,6 +68,7 @@ public class MapContext: BaseContext
             
         }
     }
-
-    // public ObjectsListAsset ObjectsListAsset => AssetDict[AssetConst.ObjectsList] as ObjectsListAsset;
+    
+    public PlayerScriptsList PlayerScriptsListAsset => AssetDict[AssetNameConst.PlayerScriptsList] as PlayerScriptsList;
+    
 }
