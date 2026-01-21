@@ -81,14 +81,14 @@ public class BlendInfo: Ra3MapWritable
     {
         var memoryStream = new MemoryStream();
         using var binaryWriter = new BinaryWriter(memoryStream);
-        
+
         var secondaryTextureTile = binaryReader.ReadInt32();
         binaryWriter.Write(secondaryTextureTile);
-        
+
         var originBlendDirection = binaryReader.ReadBytes(6);
         var blendDirection = ToBlendDirection(originBlendDirection);
         binaryWriter.Write(originBlendDirection);
-        
+
         var i3 = binaryReader.ReadUInt32();
         binaryWriter.Write(i3);
         var i4 = binaryReader.ReadUInt32();
@@ -97,7 +97,25 @@ public class BlendInfo: Ra3MapWritable
 
         var blendInfo = new BlendInfo(secondaryTextureTile, i3, i4, blendDirection);
         blendInfo.Data = memoryStream.ToArray();
-        
+
+        return blendInfo;
+    }
+
+    /// <summary>
+    /// Creates a new BlendInfo instance.
+    /// </summary>
+    /// <param name="secondaryTextureTile">Secondary texture tile index</param>
+    /// <param name="direction">Blend direction flags</param>
+    /// <param name="i3">Magic number field (must be 0xFFFFFFFF)</param>
+    /// <param name="i4">Magic number field (must be 0x7ACDCD00)</param>
+    /// <returns>New BlendInfo instance</returns>
+    public static BlendInfo Create(int secondaryTextureTile,
+                                   BlendDirectionEnum direction,
+                                   uint i3 = uint.MaxValue,
+                                   uint i4 = 2061107200U)
+    {
+        var blendInfo = new BlendInfo(secondaryTextureTile, i3, i4, direction);
+        blendInfo.MarkModified();
         return blendInfo;
     }
     
