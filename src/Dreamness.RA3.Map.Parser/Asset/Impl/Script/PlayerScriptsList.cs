@@ -32,7 +32,12 @@ public class PlayerScriptsList: BaseAsset
 
         while (binaryReader.BaseStream.Position < DataSize)
         {
-            ScriptLists.Add(AssetParser.FromBinaryReader(binaryReader, context) as ScriptList, ignoreModified: true);
+            var asset = AssetParser.FromBinaryReader(binaryReader, context) as ScriptList;
+            if (asset.Errored)
+            {
+                throw asset.ErrorException;
+            }
+            ScriptLists.Add(asset, ignoreModified: true);
         }
     }
 

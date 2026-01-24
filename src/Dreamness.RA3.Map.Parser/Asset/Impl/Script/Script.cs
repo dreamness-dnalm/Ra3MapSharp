@@ -302,6 +302,10 @@ public class Script: BaseAsset
         sequentialTargetName = binaryReader.ReadDefaultString();
         unknown = binaryReader.ReadDefaultString();
         
+        ObservableUtil.Subscribe(ScriptOrConditions, this);
+        ObservableUtil.Subscribe(ScriptActionOnTrue, this);
+        ObservableUtil.Subscribe(ScriptActionOnFalse, this);
+        
         while (binaryReader.BaseStream.Position < DataSize)
         {
             var asset = AssetParser.FromBinaryReader(binaryReader, context);
@@ -324,9 +328,7 @@ public class Script: BaseAsset
             }
         }
         
-        ObservableUtil.Subscribe(ScriptOrConditions, this);
-        ObservableUtil.Subscribe(ScriptActionOnTrue, this);
-        ObservableUtil.Subscribe(ScriptActionOnFalse, this);
+
         
     }
 

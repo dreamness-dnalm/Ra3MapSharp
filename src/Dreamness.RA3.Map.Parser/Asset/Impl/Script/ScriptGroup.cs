@@ -97,6 +97,10 @@ public class ScriptGroup: BaseAsset
         while (binaryReader.BaseStream.Position < DataSize)
         {
             var asset = AssetParser.FromBinaryReader(binaryReader, context);
+            if (asset.Errored)
+            {
+                throw asset.ErrorException;
+            }
             if (asset is Script script)
             {
                 Scripts.Add(script, ignoreModified: true);

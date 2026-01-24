@@ -4,7 +4,8 @@
       "Bash(dotnet test:*)",
       "Bash(Select-String -Pattern \"Passed|Failed|Total\" -Context 2)",
       "Bash(dotnet build:*)",
-      "Bash(dotnet clean:*)"
+      "Bash(dotnet clean:*)",
+      "Bash(cat:*)"
     ]
   }
 }

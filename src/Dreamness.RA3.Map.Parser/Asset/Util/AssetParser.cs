@@ -61,7 +61,7 @@ public static class AssetParser
                 break;
             case AssetNameConst.PlayerScriptsList:
                 asset = asset.Clone<PlayerScriptsList>();
-                (asset as PlayerScriptsList)?.ParseTolerance(context);
+                (asset as PlayerScriptsList)?.Parse(context);
                 break;
             case AssetNameConst.ScriptList:
                 asset = asset.Clone<ScriptList>();
