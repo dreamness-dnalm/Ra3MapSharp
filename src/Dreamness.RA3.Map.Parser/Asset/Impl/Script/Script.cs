@@ -219,9 +219,9 @@ public class Script: BaseAsset
         }
     }
 
-    private byte sequentialTargetType;
+    private SequentialTargetTypeEnum sequentialTargetType;
 
-    public byte SequentialTargetType
+    public SequentialTargetTypeEnum SequentialTargetType
     {
         get => sequentialTargetType;
         set
@@ -297,8 +297,8 @@ public class Script: BaseAsset
         evaluationInterval = binaryReader.ReadInt32();
         actionsFireSequentially = binaryReader.ReadBoolean();
         loopActions = binaryReader.ReadBoolean();
-        loopCount = binaryReader.ReadInt32();
-        sequentialTargetType = binaryReader.ReadByte();
+        loopCount = binaryReader.ReadInt32() + 1;
+        sequentialTargetType = (SequentialTargetTypeEnum)binaryReader.ReadByte();
         sequentialTargetName = binaryReader.ReadDefaultString();
         unknown = binaryReader.ReadDefaultString();
         
@@ -317,7 +317,6 @@ public class Script: BaseAsset
             {
                 ScriptActionOnTrue.Add(scriptAction, ignoreModified: true);
             }
-
             else
             {
                 throw new InvalidDataException(
@@ -349,20 +348,62 @@ public class Script: BaseAsset
         binaryWriter.Write(evaluationInterval);
         binaryWriter.Write(actionsFireSequentially);
         binaryWriter.Write(loopActions);
-        binaryWriter.Write(loopCount);
-        binaryWriter.Write(sequentialTargetType);
+        binaryWriter.Write(loopCount - 1);
+        binaryWriter.Write((byte)sequentialTargetType);
         binaryWriter.WriteDefaultString(sequentialTargetName);
         binaryWriter.WriteDefaultString(unknown);
+        
+        foreach (var o in ScriptOrConditions)
+        {
+            binaryWriter.Write(o.ToBytes(context));
+        }
+        foreach (var o in ScriptActionOnTrue)
+        {
+            binaryWriter.Write(o.ToBytes(context));
+        }
+        foreach (var o in ScriptActionOnFalse)
+        {
+            binaryWriter.Write(o.ToBytes(context));
+        }
 
-        binaryWriter.Write(ScriptOrConditions.ToBytes(context));
-        
-        binaryWriter.Write(ScriptActionOnTrue.ToBytes(context));
-        
-        binaryWriter.Write(ScriptActionOnFalse.ToBytes(context));
+        // binaryWriter.Write(ScriptOrConditions.ToBytes(context));
+        //
+        // binaryWriter.Write(ScriptActionOnTrue.ToBytes(context));
+        //
+        // binaryWriter.Write(ScriptActionOnFalse.ToBytes(context));
         
         binaryWriter.Flush();
         return memoryStream.ToArray();
     }
+
+    public static Script Default(string name, BaseContext context)
+    {
+        var script = new Script();
+        script.Name = name;
+        script.Comment = "";
+        script.ConditionComment = "";
+        script.ActionComment = "";
+        script.IsActive = true;
+        script.DeactivateUponSuccess = false;
+        script.ActiveInEasy = true;
+        script.ActiveInMedium = true;
+        script.ActiveInHard = true;
+        script.IsSubroutine = false;
+        script.EvaluationInterval = 0;
+        script.ActionsFireSequentially = false;
+        script.SequentialTargetType = SequentialTargetTypeEnum.Unit;
+        script.SequentialTargetName = "";
+        script.LoopActions = false;
+        script.LoopCount = 1;
+        ObservableUtil.Subscribe(script.ScriptOrConditions, script);
+        ObservableUtil.Subscribe(script.ScriptActionOnTrue, script);
+        ObservableUtil.Subscribe(script.ScriptActionOnFalse, script);
+        script.ApplyBasicInfo(context);
+        script.MarkModified();
+
+        return script;
+    }
+
 
     public JsonNode ToJsonNode()
     {
@@ -371,22 +412,59 @@ public class Script: BaseAsset
         jsonObj["Type"] = "Script";
         
         jsonObj["Name"] = name;
-        jsonObj["Comment"] = comment;
-        jsonObj["ConditionComment"] = conditionComment;
-        jsonObj["ActionComment"] = actionComment;
-        jsonObj["IsActive"] = isActive;
+
+        if (comment != "")
+        {
+            jsonObj["Comment"] = comment;
+        }
+
+        if (conditionComment != "")
+        {
+            jsonObj["ConditionComment"] = conditionComment;
+        }
+
+        if (actionComment != "")
+        {
+            jsonObj["ActionComment"] = actionComment;
+        }
+
+        if (isActive == false)
+        {
+            jsonObj["IsActive"] = isActive;
+        }
+
+        if (IsSubroutine)
+        {
+            jsonObj["IsSubroutine"] = isSubroutine;
+        }
+        
         jsonObj["DeactivateUponSuccess"] = deactivateUponSuccess;
-        jsonObj["ActiveInEasy"] = activeInEasy;
-        jsonObj["ActiveInMedium"] = activeInMedium;
-        jsonObj["ActiveInHard"] = activeInHard;
-        jsonObj["IsSubroutine"] = isSubroutine;
+
+        if (!(activeInEasy && activeInMedium && activeInHard))
+        {
+            var jsonArray = new JsonArray();
+            jsonArray.Add(activeInEasy);
+            jsonArray.Add(activeInMedium);
+            jsonArray.Add(activeInHard);
+
+            jsonObj["ActiveInDifficulties"] = jsonArray;
+        }
+        
         jsonObj["EvaluationInterval"] = evaluationInterval;
-        jsonObj["ActionsFireSequentially"] = actionsFireSequentially;
-        jsonObj["LoopActions"] = loopActions;
-        jsonObj["LoopCount"] = loopCount;
-        jsonObj["SequentialTargetType"] = sequentialTargetType;
-        jsonObj["SequentialTargetName"] = sequentialTargetName;
-        // jsonObj["Unknown"] = unknown;
+
+        if (!(actionsFireSequentially == false && sequentialTargetType == SequentialTargetTypeEnum.Unit &&
+              sequentialTargetName == "" && loopActions == false && loopCount == 1))
+        {
+            var sequentialScript = new JsonObject();
+            sequentialScript["ActionsFireSequentially"] = actionsFireSequentially;
+            sequentialScript["SequentialTargetType"] = sequentialTargetType.ToString();
+            sequentialScript["SequentialTargetName"] = sequentialTargetName;
+            sequentialScript["LoopActions"] = loopActions;
+            sequentialScript["LoopCount"] = loopCount;
+        
+            jsonObj["SequentialScript"] = sequentialScript;
+        }
+        
 
         var ifJsonArr = new JsonArray();
         foreach (var o in ScriptOrConditions)
@@ -413,8 +491,99 @@ public class Script: BaseAsset
         return jsonObj;
     }
 
-    public static Script FromJsonNode(JsonNode node)
+    public static Script FromJsonNode(JsonNode node, BaseContext context)
     {
-        throw new NotImplementedException();
+        var jsonObject = node as JsonObject;
+        if (!jsonObject.ContainsKey("Name"))
+        {
+            throw new InvalidDataException("Bad Script Json: Missing Name field.");
+        }
+
+        var script = Default(node["Name"].ToString(), context);
+        if (jsonObject.ContainsKey("Comment"))
+        {
+            script.Comment = node["Comment"].ToString();
+        }
+        if (jsonObject.ContainsKey("ConditionComment"))
+        {
+            script.ConditionComment = node["ConditionComment"].ToString();
+        }
+        if (jsonObject.ContainsKey("ActionComment"))
+        {
+            script.ActionComment = node["ActionComment"].ToString();
+        }
+        if (jsonObject.ContainsKey("IsActive"))
+        {
+            script.IsActive = node["IsActive"].GetValue<bool>();
+        }
+        if (jsonObject.ContainsKey("IsSubroutine"))
+        {
+            script.IsSubroutine = node["IsSubroutine"].GetValue<bool>();
+        }
+        if (jsonObject.ContainsKey("DeactivateUponSuccess"))
+        {
+            script.DeactivateUponSuccess = node["DeactivateUponSuccess"].GetValue<bool>();
+        }
+        if (jsonObject.ContainsKey("ActiveInDifficulties"))
+        {
+            var difArr = node["ActiveInDifficulties"] as JsonArray;
+            script.ActiveInEasy = difArr[0].GetValue<bool>();
+            script.ActiveInMedium = difArr[1].GetValue<bool>();
+            script.ActiveInHard = difArr[2].GetValue<bool>();
+        }
+        if (jsonObject.ContainsKey("EvaluationInterval"))
+        {
+            script.EvaluationInterval = node["EvaluationInterval"].GetValue<int>();
+        }
+        if (jsonObject.ContainsKey("SequentialScript"))
+        {
+            var seqObj = node["SequentialScript"] as JsonObject;
+            script.ActionsFireSequentially = seqObj["ActionsFireSequentially"].GetValue<bool>();
+            script.SequentialTargetType = Enum.Parse<SequentialTargetTypeEnum>(seqObj["SequentialTargetType"].ToString());
+            script.SequentialTargetName = seqObj["SequentialTargetName"].ToString();
+            script.LoopActions = seqObj["LoopActions"].GetValue<bool>();
+            script.LoopCount = seqObj["LoopCount"].GetValue<int>();
+        }
+        ObservableUtil.Subscribe(script.ScriptOrConditions, script);
+        ObservableUtil.Subscribe(script.ScriptActionOnTrue, script);
+        ObservableUtil.Subscribe(script.ScriptActionOnFalse, script);
+        
+        if (jsonObject.ContainsKey("If"))
+        {
+            var ifArr = node["If"] as JsonArray;
+            foreach (var o in ifArr)
+            {
+                var orCondition = OrCondition.FromJsonNode(o, context);
+                script.ScriptOrConditions.Add(orCondition, ignoreModified: true);
+            }
+        }
+        if (jsonObject.ContainsKey("Then"))
+        {
+            var thenArr = node["Then"] as JsonArray;
+            foreach (var o in thenArr)
+            {
+                var scriptAction = ScriptAction.FromJsonNode(o, context);
+                script.ScriptActionOnTrue.Add(scriptAction, ignoreModified: true);
+            }
+        }
+        if (jsonObject.ContainsKey("Else"))
+        {
+            var elseArr = node["Else"] as JsonArray;
+            foreach (var o in elseArr)
+            {                
+                var scriptActionFalse = ScriptActionFalse.FromJsonNode(o, context);
+                script.ScriptActionOnFalse.Add(scriptActionFalse, ignoreModified: true);
+            }
+        }
+        script.ScriptOrConditions.MarkModified();
+        script.ScriptActionOnTrue.MarkModified();
+        script.ScriptActionOnFalse.MarkModified();
+        return script;
     }
+}
+
+public enum SequentialTargetTypeEnum: byte
+{
+    Team = (byte)0,
+    Unit = (byte)1
 }

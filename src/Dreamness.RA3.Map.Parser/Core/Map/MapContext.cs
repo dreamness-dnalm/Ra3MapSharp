@@ -39,6 +39,17 @@ public class MapContext: BaseContext
         OverrideAsset(asset);
     }
     
+    public void ImportPlayerScriptsListFromJson(string json)
+    {
+        var asset = PlayerScriptsList.FromJson(json, this);
+        OverrideAsset(asset);
+    }
+    
+    public string ExportPlayerScriptsListToJson()
+    {
+        return PlayerScriptsList.ToJson(this);
+    }
+    
     // public void
     
     public HeightMapDataAsset HeightMapDataAsset => AssetDict[AssetNameConst.HeightMapData] as HeightMapDataAsset;
@@ -52,6 +63,8 @@ public class MapContext: BaseContext
     public BlendTileDataAsset BlendTileDataAsset => AssetDict[AssetNameConst.BlendTileData] as BlendTileDataAsset;
     
     public ObjectsListAsset ObjectsListAsset => AssetDict[AssetNameConst.ObjectsList] as ObjectsListAsset;
+    
+    public PlayerScriptsList PlayerScriptsList => AssetDict[AssetNameConst.PlayerScriptsList] as PlayerScriptsList;
     
     public MissionObjectivesAsset MissionObjectivesAsset
     {

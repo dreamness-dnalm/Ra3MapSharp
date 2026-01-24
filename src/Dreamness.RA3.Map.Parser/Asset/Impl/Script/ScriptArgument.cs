@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using Dreamness.Ra3.Map.Parser.Asset.Base;
+using Dreamness.RA3.Map.Parser.Asset.ScriptData;
 using Dreamness.Ra3.Map.Parser.Core.Base;
 using Dreamness.Ra3.Map.Parser.Util;
 
@@ -85,16 +86,66 @@ public class ScriptArgument: Ra3MapWritable
             }
         }
     }
+    
+    public ArgumentModel ArgumentModel { get; private set; }
+    
+    public ScriptArgument(ArgumentModel argumentModel)
+    {
+        if (argumentModel == null)
+        {
+            throw new ArgumentNullException(nameof(argumentModel));
+        }
+        ArgumentModel = argumentModel;
+    }
 
-    public static ScriptArgument FromBinaryReader(BinaryReader binaryReader, BaseContext context)
+    public static ScriptArgument Of(ArgumentModel argumentModel, string value)
+    {
+        var scriptArgument = new ScriptArgument(argumentModel);
+        scriptArgument.ArgumentType = argumentModel.TypeNumber;
+        switch (argumentModel.RealType)
+        {
+            case "String":
+                scriptArgument.StringValue = value;
+                break;
+            case "Int32":
+                scriptArgument.IntValue = int.Parse(value);
+                break;
+            case "Double":
+                scriptArgument.FloatValue = float.Parse(value);
+                break;
+            case "Vec3D":
+                var parts = value.Split(',');
+                if (parts.Length != 3)
+                {
+                    throw new FormatException($"Invalid Vec3D format: {value}");
+                }
+                var x = float.Parse(parts[0]);
+                var y = float.Parse(parts[1]);
+                var z = float.Parse(parts[2]);
+                scriptArgument.Position = new Vec3D(x, y, z);
+                break;
+            default:
+                throw new InvalidDataException($"Unexpected RealType in ScriptArgument: {argumentModel.RealType}");
+        }
+        scriptArgument.MarkModified();
+
+        return scriptArgument;
+    }
+
+    public static ScriptArgument FromBinaryReader(BinaryReader binaryReader, BaseContext context, ArgumentModel argumentModel)
     {
         using var memoryStream = new MemoryStream();
         using var binaryWriter = new BinaryWriter(memoryStream);
         
-        var asset = new ScriptArgument();
+        var asset = new ScriptArgument(argumentModel);
         
         asset.ArgumentType = (int)binaryReader.ReadUInt32();
         binaryWriter.Write(asset.ArgumentType);
+
+        if (asset.argumentType != argumentModel.TypeNumber)
+        {
+            throw new InvalidDataException($"ArgumentType mismatch in ScriptArgument: expected {argumentModel.TypeNumber}, got {asset.argumentType}");
+        }
         
         if (asset.ArgumentType == 16)
         {
@@ -158,18 +209,30 @@ public class ScriptArgument: Ra3MapWritable
         
         // todo argumentType?
         
-        switch (ArgumentType)
+        switch (ArgumentModel.RealType)
         {
+            case "String":
+                return StringValue;
+            case "Int32":
+                return IntValue.ToString();
+            case "Double":
+                return FloatValue.ToString();
+            case "Vec3D":
+                return $"{Position.X},{Position.Y},{Position.Z}";
+            default:
+                throw new InvalidDataException($"Unexpected RealType in ScriptArgument: {ArgumentModel.RealType}");
+            
+            
             // case 2:
             //     return IntValue.ToString();
             // case 4:
             //     return FloatValue.ToString();
             // case 8:
             //     return StringValue;
-            case 16:
-                return $"{Position.X},{Position.Y},{Position.Z}";
-            default:
-                return IntValue.ToString();
+            // case 16:
+            //     return $"{Position.X},{Position.Y},{Position.Z}";
+            // default:
+            //     return IntValue.ToString();
                 // throw new InvalidDataException($"Unexpected ArgumentType in ScriptArgument: {ArgumentType}");
         }
     }

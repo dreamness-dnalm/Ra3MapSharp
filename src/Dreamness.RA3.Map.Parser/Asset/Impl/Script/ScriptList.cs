@@ -93,7 +93,7 @@ public class ScriptList: BaseAsset
 
     public JsonNode ToJsonNode()
     {
-        var jsonObj = new JsonObject();
+        // var jsonObj = new JsonObject();
         
         
         var jsonArray = new JsonArray();
@@ -107,37 +107,36 @@ public class ScriptList: BaseAsset
         {
             jsonArray.Add(Scripts[i].ToJsonNode());
         }
-        jsonObj["Content"] = jsonArray;
-        
-        return jsonObj;
+        // jsonObj["Content"] = jsonArray;
+        //
+        // return jsonObj;
+        return jsonArray;
     }
 
     public static ScriptList FromJsonNode(JsonNode node, BaseContext context)
     {
         var scriptList = Empty(context);
 
-        var jsonObj = node as JsonObject;
-
-        var contentArr = jsonObj["Content"] as JsonArray;
+        var contentArr = node as JsonArray;
 
         foreach (var item in contentArr)
         {
             var o = item as JsonObject;
             var t = (string)o["Type"];
-            if (t == "Script")
+            switch (t)
             {
-                scriptList.Add(Script.FromJsonNode(o));
-            }
-            else if (t == "Folder")
-            {
-                scriptList.Add(Script.FromJsonNode(o));
-            }
-            else
-            {
-                throw new InvalidDataException();
+                case "Script":
+                    scriptList.Add(Script.FromJsonNode(o, context));
+                    break;
+                case "Folder":
+                    scriptList.Add(ScriptGroup.FromJsonNode(o, context));
+                    break;
+                default:
+                    throw new InvalidDataException($"Unexpected Type in ScriptList FromJsonNode: {t}");
             }
         }
-
+        
+        
         return scriptList;
     }
 }

@@ -80,8 +80,12 @@ public class PlayerScriptsList: BaseAsset
 
         for (int i = 0; i < ScriptLists.Count; i++)
         {
-            var o = ScriptLists[i].ToJsonNode();
-            ((JsonObject)o).Add("Name", playerNames[i]);
+            var o = new JsonObject();
+            
+            // var content = ScriptLists[i].ToJsonNode();
+            // var playerName = playerNames[i];
+            o.Add("PlayerName", playerNames[i]);
+            o.Add("Content", ScriptLists[i].ToJsonNode());
             
             jsonArray.Add(o);
         }
@@ -90,19 +94,60 @@ public class PlayerScriptsList: BaseAsset
         // return jsonArray.ToJsonString();
     }
 
-    public void LoadJson(string json)
+    public PlayerScriptsList FromJson(string json, BaseContext context)
     {
-        throw new NotImplementedException();
-        ScriptLists.Clear();
+        
 
         var jsonArr = (JsonArray)JsonArray.Parse(json);
+        
+        var sidesListAsset = (SidesListAsset)context.AssetDict[AssetNameConst.SidesList];
+        var playerNames = sidesListAsset.PlayerDataList.Select(p => p.Name).ToList();
+
+        var scriptLists = new ScriptList[playerNames.Count];
 
         foreach (var o in jsonArr)
         {
             var scriptListObj = o as JsonObject;
-            var name = scriptListObj["Name"];
-            // TODO 获取是第几个
+            var playerName = scriptListObj["PlayerName"].ToString();
+            if (playerName == "(neutral)")
+            {
+                playerName = "";
+            }
+
+            var indexOf = playerNames.IndexOf(playerName);
+            if (indexOf < 0)
+            {
+                throw new System.Exception($"Bad Script Json: Player name ({playerName}) not exists.");
+            }
+
+            ScriptList scriptList = null;
+            if (scriptListObj.ContainsKey("Content"))
+            {
+                scriptList = ScriptList.FromJsonNode(scriptListObj["Content"], context);
+            }
+            else
+            {
+                scriptList = ScriptList.Empty(context);
+            }
             
+            scriptLists[indexOf] = scriptList;
         }
+        
+        for (int i = 0; i < scriptLists.Length; i++)
+        {
+            if (scriptLists[i] == null)
+            {
+                scriptLists[i] = ScriptList.Empty(context);
+            }
+        }
+        
+        
+        ScriptLists.Clear();
+        for(int i = 0; i < scriptLists.Length; i++)
+        {
+            ScriptLists.Add(scriptLists[i]);
+        }
+
+        return this;
     }
 }

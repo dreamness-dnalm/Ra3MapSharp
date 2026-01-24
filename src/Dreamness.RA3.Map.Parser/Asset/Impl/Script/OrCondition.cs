@@ -49,4 +49,19 @@ public class OrCondition: BaseAsset
         
         return jsonArr;
     }
+    
+    public static OrCondition FromJsonNode(JsonNode jsonNode, BaseContext context)
+    {
+        var orCondition = new OrCondition();
+        ObservableUtil.Subscribe(orCondition.Conditions, orCondition);
+        
+        foreach (var item in jsonNode.AsArray())
+        {
+            var condition = ScriptCondition.FromJsonNode(item, context);
+            orCondition.Conditions.Add(condition);
+        }
+        orCondition.MarkModified();
+
+        return orCondition;
+    }
 }

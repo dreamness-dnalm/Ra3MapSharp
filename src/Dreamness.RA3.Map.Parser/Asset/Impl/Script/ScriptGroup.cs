@@ -69,6 +69,21 @@ public class ScriptGroup: BaseAsset
         return Name;
         // return AssetNameConst.ScriptGroup;
     }
+    
+    public static ScriptGroup Empty(string name, bool isActive, bool isSubroutine, BaseContext context)
+    {
+        var asset = new ScriptGroup();
+        asset.Name = name;
+        asset.IsActive = isActive;
+        asset.IsSubroutine = isSubroutine;
+        asset.ApplyBasicInfo(context); // TODO: check if required
+        
+        ObservableUtil.Subscribe(asset.Scripts, asset);
+        ObservableUtil.Subscribe(asset.ScriptGroups, asset);
+        
+        asset.MarkModified();
+        return asset;
+    }
 
     protected override void _Parse(BaseContext context)
     {
@@ -122,8 +137,16 @@ public class ScriptGroup: BaseAsset
         
         jsonObj["Type"] = "Folder";
         jsonObj["Name"] = Name;
-        jsonObj["IsActive"] = IsActive;
-        jsonObj["IsSubroutine"] = IsSubroutine;
+
+        if (IsActive == false)
+        {
+            jsonObj["IsActive"] = IsActive;
+        }
+
+        if (IsSubroutine)
+        {
+            jsonObj["IsSubroutine"] = IsSubroutine;
+        }
         
         var content = new JsonArray();
         foreach (var o in ScriptGroups)
@@ -140,8 +163,58 @@ public class ScriptGroup: BaseAsset
         return jsonObj;
     }
     
-    public static ScriptGroup FromJsonNode(JsonNode node)
+    public void Add(Object o)
     {
-        throw new NotImplementedException();
+        if (o is Script script)
+        {
+            Scripts.Add(script);
+        }else if (o is ScriptGroup scriptGroup)
+        {
+            ScriptGroups.Add(scriptGroup);
+        }
+        else
+        {
+            throw new InvalidDataException();
+        }
+    }
+    
+    
+    
+    public static ScriptGroup FromJsonNode(JsonNode node, BaseContext context)
+    {
+        var jsonObj = node as JsonObject;
+        if (!jsonObj.ContainsKey("Name"))
+        {
+            throw new InvalidDataException("Missing Name in ScriptGroup FromJsonNode");
+        }
+        var name = (string)jsonObj["Name"];
+        var isActive = jsonObj.ContainsKey("IsActive")? (bool)jsonObj["IsActive"]: true;
+        var isSubroutine = jsonObj.ContainsKey("IsSubroutine")? (bool)jsonObj["IsSubroutine"]: false;
+        
+        var scriptGroup = Empty(name, isActive, isSubroutine, context);
+
+        if (jsonObj.ContainsKey("Content"))
+        {
+            var contentArr = jsonObj["Content"] as JsonArray;
+
+            foreach (var item in contentArr)
+            {
+                var o = item as JsonObject;
+                var t = (string)o["Type"];
+                switch (t)
+                {
+                    case "Script":
+                        scriptGroup.Add(Script.FromJsonNode(o, context));
+                        break;
+                    case "Folder":
+                        scriptGroup.Add(ScriptGroup.FromJsonNode(o, context));
+                        break;
+                    default:
+                        throw new InvalidDataException($"Unexpected Type in ScriptList FromJsonNode: {t}");
+                }
+            }
+        }
+
+        return scriptGroup;
     }
 }

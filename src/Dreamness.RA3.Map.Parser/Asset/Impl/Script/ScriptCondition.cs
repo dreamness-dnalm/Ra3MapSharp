@@ -68,4 +68,19 @@ public class ScriptCondition: Ra3MapWritable
     {
         return _conditionContent.ToJsonNode();
     }
+
+    public static ScriptCondition FromJsonNode(JsonNode item, BaseContext context)
+    {
+        var asset = new ScriptCondition();
+        // var contentNode = item["ConditionContent"];
+        // if (contentNode == null)
+        // {
+        //     throw new InvalidDataException("Missing ConditionContent in ScriptCondition JSON.");
+        // }
+        asset._conditionContent = ScriptConditionContent.FromJsonNode(item, context);
+        ObservableUtil.Subscribe(asset._conditionContent, asset);
+        
+        asset.MarkModified();
+        return asset;
+    }
 }

@@ -1,7 +1,9 @@
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using Dreamness.Ra3.Map.Parser.Asset.Base;
 using Dreamness.Ra3.Map.Parser.Asset.Collection.Dim1Array;
 using Dreamness.Ra3.Map.Parser.Asset.Collection.Property;
+using Dreamness.RA3.Map.Parser.Asset.ScriptData;
 using Dreamness.Ra3.Map.Parser.Core.Base;
 using Dreamness.Ra3.Map.Parser.Util;
 
@@ -98,7 +100,39 @@ public class ScriptConditionContent: BaseAsset
         }
     }
     
+    public ScriptDeclareModel ScriptDeclareModel => ScriptData.GetConditionScriptDeclareFromCommandWord(contentName);
+    
     public WritableList<ScriptArgument> Arguments { get; } = new WritableList<ScriptArgument>();
+    
+    public static ScriptConditionContent Of(string name, List<string> arguments, BaseContext context)
+    {
+        var asset = new ScriptConditionContent();
+        asset.SetContentName(name, context);
+        asset.ApplyBasicInfo(context);
+        asset.ContentType = asset.ScriptDeclareModel.EditorNumber;
+        asset.Enabled = true;
+        asset.IsInverted = false;
+        asset.AssetPropertyType = AssetProperty.AssetPropertyType.stringType;
+        
+        ObservableUtil.Subscribe(asset.Arguments, asset);
+        
+        if(arguments.Count != asset.ScriptDeclareModel.Arguments.Count)
+        {
+            throw new ArgumentException($"Script condition argument count mismatch for {name}: expected {asset.ScriptDeclareModel.Arguments.Count}, got {arguments.Count}");
+        }
+        
+        for (int i = 0; i < arguments.Count; i++)
+        {
+            var arg = ScriptArgument.Of(asset.ScriptDeclareModel.Arguments[i], arguments[i]);
+            asset.Arguments.Add(arg);
+        }
+        
+        
+        
+        asset.MarkModified();
+        
+        return asset;
+    }
     
     
     
@@ -123,10 +157,21 @@ public class ScriptConditionContent: BaseAsset
         contentName = context.GetDeclaredString(nameIndex);
 
         var argCnt = binaryReader.ReadInt32();
+        
+        var scriptDeclareModel = ScriptDeclareModel;
+        if (scriptDeclareModel.Arguments.Count != argCnt)
+        {
+            throw new ArgumentException($"Script condition argument count mismatch for {contentName}: expected {scriptDeclareModel.Arguments.Count}, got {argCnt}");
+        }
+
+        if (scriptDeclareModel.EditorNumber != contentType)
+        {
+            throw new ArgumentException($"Script condition content type mismatch for {contentName}: expected {scriptDeclareModel.EditorNumber}, got {contentType}");
+        }
 
         for (int i = 0; i < argCnt; i++)
         {
-            Arguments.Add(ScriptArgument.FromBinaryReader(binaryReader, context));
+            Arguments.Add(ScriptArgument.FromBinaryReader(binaryReader, context, scriptDeclareModel.Arguments[i]));
         }
         ObservableUtil.Subscribe(Arguments, this);
 
@@ -157,23 +202,86 @@ public class ScriptConditionContent: BaseAsset
 
     public JsonNode ToJsonNode()
     {
-        // throw new NotImplementedException();
         
         var jsonObj = new JsonObject();
         
-        
-        jsonObj["contentType"] = contentType; // todo remove ???????
-        jsonObj["Name"] = contentName;
-        jsonObj["enabled"] = enabled;
-        jsonObj["isInverted"] = isInverted;
-
         var argJsonArr = new JsonArray();
+        var argTypesArr = new JsonArray();
         foreach (var arg in Arguments)
         {
             argJsonArr.Add(arg.ToJsonNode());
+            argTypesArr.Add(arg.ArgumentModel.RealType);
         }
-        jsonObj["Argument"] = argJsonArr;
+        
+        
+        jsonObj["Name"] = contentName;
+        if (enabled == false)
+        {
+            jsonObj["Enabled"] = enabled;
+        }
+
+        if (isInverted)
+        {
+            jsonObj["IsInverted"] = isInverted;
+        }
+
+        if (argTypesArr.Count > 0)
+        {
+            jsonObj["Arguments"] = argJsonArr;
+        }
+
+        if (ScriptDeclareModel.ScriptDesc != "")
+        {
+            jsonObj["Desc_IGNORE"] = ScriptDeclareModel.ScriptDesc;
+        }
+        jsonObj["Name_EN_IGNORE"] = $"[{ScriptDeclareModel.EditorNumber}] {ScriptDeclareModel.ScriptName.Trim()}";
+        jsonObj["Name_ZH_IGNORE"] = $"[{ScriptDeclareModel.EditorNumber}] {ScriptDeclareModel.ScriptTrans.Trim()}";
+        jsonObj["ArgumentsDesc_IGNORE"] = ScriptDeclareModel.ScriptArg;
+        jsonObj["ArgumentsType_IGNORE"] = argTypesArr;
         
         return jsonObj;
     }
+
+    public static ScriptConditionContent FromJsonNode(JsonNode jsonNode, BaseContext context)
+    {
+        var jsonObj = (JsonObject)jsonNode;
+
+        if (!jsonObj.ContainsKey("Name"))
+        {
+            throw new ArgumentException("Script condition content must have a Name field.");
+        }
+
+        var name = jsonObj["Name"].ToString();
+
+        
+        var arguments = new List<string>();
+        
+        if (jsonObj.ContainsKey("Arguments"))
+        {
+            var argJsonArr = (JsonArray)jsonObj["Arguments"];
+            
+            for (int i = 0; i < argJsonArr.Count; i++)
+            {
+                arguments.Add(argJsonArr[i].ToString());
+            }
+        }
+        
+        var scriptConditionContent = ScriptConditionContent.Of(name, arguments, context);
+        
+        if (jsonObj.ContainsKey("Enabled"))
+        {
+            scriptConditionContent.Enabled = (bool)jsonObj["Enabled"];
+        }
+
+        if (jsonObj.ContainsKey("IsInverted"))
+        {
+            scriptConditionContent.IsInverted = (bool)jsonObj["IsInverted"];
+        }
+        
+        scriptConditionContent.MarkModified();
+        
+        return scriptConditionContent;
+        
+    }
+    
 }
