@@ -2379,7 +2379,7 @@
       },
       {
         "typeNumber": 19,
-        "realType": "Int32",
+        "realType": "String",
         "exampleData": "2"
       }
     ]
@@ -2404,7 +2404,7 @@
       },
       {
         "typeNumber": 19,
-        "realType": "Int32",
+        "realType": "String",
         "exampleData": "2"
       }
     ]
@@ -5783,7 +5783,7 @@
       },
       {
         "typeNumber": 19,
-        "realType": "Int32",
+        "realType": "String",
         "exampleData": "2"
       }
     ]
@@ -5808,7 +5808,7 @@
       },
       {
         "typeNumber": 19,
-        "realType": "Int32",
+        "realType": "String",
         "exampleData": "2"
       }
     ]
@@ -11126,6 +11126,126 @@
     "scriptTrans": "切换AVI捕获",
     "commandWord": "TOGGLE_AVI_CAPTURE",
     "editorNumber": 271,
+    "argumentModel": []
+  },
+  {
+    "scriptName": " Team/Move/Set team to follow waypoint path.",
+    "scriptDesc": "",
+    "scriptArg": " Have ~ follow ~, as a team is ~, in formation is ~.",
+    "scriptTrans": "队伍遵循路径",
+    "commandWord": "TEAM_FOLLOW_WAYPOINTS",
+    "editorNumber": 32,
+    "argumentModel": [
+      {
+        "typeNumber": 3,
+        "realType": "String",
+        "exampleData": "Team"
+      },
+      {
+        "typeNumber": 24,
+        "realType": "String",
+        "exampleData": "WaypointPath"
+      },
+      {
+        "typeNumber": 8,
+        "realType": "Int32",
+        "exampleData": "1"
+      },
+      {
+        "typeNumber": 8,
+        "realType": "Int32",
+        "exampleData": "1"
+      }
+    ]
+  },
+  {
+    "scriptName": " Unused or Obsolete/Cinematics/Fade/Fade using an add blend to white._Fade using an add blend to white.",
+    "scriptDesc": "",
+    "scriptArg": " Invalid",
+    "scriptTrans": "",
+    "commandWord": "CAMERA_FADE_ADD",
+    "editorNumber": 106,
+    "argumentModel": []
+  },
+  {
+    "scriptName": " Unused or Obsolete/Cinematics/Fade/Fade using a subtractive blend to black._fade using a subtractive blend to black.",
+    "scriptDesc": "",
+    "scriptArg": " Invalid",
+    "scriptTrans": "",
+    "commandWord": "CAMERA_FADE_SUBTRACT",
+    "editorNumber": 107,
+    "argumentModel": []
+  },
+  {
+    "scriptName": " Unused or Obsolete/Cinematics/Fade/Fade using a saturate blend._Fade using a saturate blend.",
+    "scriptDesc": "",
+    "scriptArg": " Invalid",
+    "scriptTrans": "",
+    "commandWord": "CAMERA_FADE_SATURATE",
+    "editorNumber": 108,
+    "argumentModel": []
+  },
+  {
+    "scriptName": " Unused or Obsolete/Cinematics/Fade/Fade using a multiply blend to black._Fade using a multiply blend to black.",
+    "scriptDesc": "",
+    "scriptArg": " Invalid",
+    "scriptTrans": "",
+    "commandWord": "CAMERA_FADE_MULTIPLY",
+    "editorNumber": 109,
+    "argumentModel": []
+  },
+  {
+    "scriptName": " Unused or Obsolete/Tutorial/Open Command Bar Tab.",
+    "scriptDesc": "",
+    "scriptArg": " Invalid",
+    "scriptTrans": "打开命令栏选项卡",
+    "commandWord": "OPEN_COMMAND_BAR",
+    "editorNumber": 234,
+    "argumentModel": []
+  },
+  {
+    "scriptName": " Unused or Obsolete/Interface/Objectives/Show satellite view presentation for objective.",
+    "scriptDesc": "",
+    "scriptArg": " Invalid",
+    "scriptTrans": "显示指定目标的卫星视图演示",
+    "commandWord": "SATELLITE_VIEW_PRESENTATION_FOR_OBJECTIVE",
+    "editorNumber": 409,
+    "argumentModel": []
+  },
+  {
+    "scriptName": " Unused or Obsolete/Interface/Objectives/Mark mission objective as not completed._Mark mission objective as not completed.",
+    "scriptDesc": "",
+    "scriptArg": " Invalid",
+    "scriptTrans": "",
+    "commandWord": "SATELLITE_VIEW_PRESENTATION_FOR_ALL_OBJECTIVES",
+    "editorNumber": 410,
+    "argumentModel": []
+  },
+  {
+    "scriptName": " Unused or Obsolete/Interface/Objectives/Link mission objective to object using presentation settings.",
+    "scriptDesc": "",
+    "scriptArg": " Invalid",
+    "scriptTrans": "使用表示设置将任务目标链接到对象",
+    "commandWord": "LINK_MISSION_OBJECTIVE_TO_OBJECT_WITH_PRESENTATION_SETTINGS",
+    "editorNumber": 464,
+    "argumentModel": []
+  },
+  {
+    "scriptName": " Unused or Obsolete/Interface/Objectives/Link mission objective to waypoint using presentation settings.",
+    "scriptDesc": "",
+    "scriptArg": " Invalid",
+    "scriptTrans": "使用表示设置将任务目标链接到路径点",
+    "commandWord": "LINK_MISSION_OBJECTIVE_TO_WAYPOINT_WITH_PRESENTATION_SETTINGS",
+    "editorNumber": 465,
+    "argumentModel": []
+  },
+  {
+    "scriptName": " Unused or Obsolete/Tutorial/Flash UI SUDS element.",
+    "scriptDesc": "",
+    "scriptArg": " Invalid",
+    "scriptTrans": "显示UI SUDS元素",
+    "commandWord": "FLASH_UI_SUDS_ELEMENT",
+    "editorNumber": 480,
     "argumentModel": []
   }
 ]

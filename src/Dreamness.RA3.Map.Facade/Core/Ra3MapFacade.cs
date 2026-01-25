@@ -19,6 +19,7 @@ public partial class Ra3MapFacade
         LoadObjectsList();
         LoadBlendTileData();
         LoadMissionObjectPart();
+        LoadScriptPart();
     }
 
     /// <summary>

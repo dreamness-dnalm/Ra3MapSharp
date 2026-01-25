@@ -138,7 +138,7 @@ public class ScriptConditionContent: BaseAsset
     
     public override short GetVersion()
     {
-        return 0;
+        return 6;
     }
 
     public override string GetAssetType()

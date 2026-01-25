@@ -66,8 +66,8 @@ public class ScriptGroup: BaseAsset
 
     public override string GetAssetType()
     {
-        return Name;
-        // return AssetNameConst.ScriptGroup;
+        // return Name;
+        return AssetNameConst.ScriptGroup;
     }
     
     public static ScriptGroup Empty(string name, bool isActive, bool isSubroutine, BaseContext context)
@@ -76,7 +76,7 @@ public class ScriptGroup: BaseAsset
         asset.Name = name;
         asset.IsActive = isActive;
         asset.IsSubroutine = isSubroutine;
-        asset.ApplyBasicInfo(context); // TODO: check if required
+        asset.ApplyBasicInfo(context); 
         
         ObservableUtil.Subscribe(asset.Scripts, asset);
         ObservableUtil.Subscribe(asset.ScriptGroups, asset);
@@ -128,6 +128,7 @@ public class ScriptGroup: BaseAsset
         binaryWriter.WriteDefaultString(Name);
         binaryWriter.Write(IsActive);
         binaryWriter.Write(IsSubroutine);
+        
         binaryWriter.Write(Scripts.ToBytes(context));
         binaryWriter.Write(ScriptGroups.ToBytes(context));
         

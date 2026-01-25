@@ -21,6 +21,6 @@ public partial class Ra3MapFacade
     // -------- init --------
     private void LoadScriptPart()
     {
-        _playerScriptsList = ra3Map.Context.PlayerScriptsList;
+        _playerScriptsList = ra3Map.Context.PlayerScriptsListAsset;
     }
 }

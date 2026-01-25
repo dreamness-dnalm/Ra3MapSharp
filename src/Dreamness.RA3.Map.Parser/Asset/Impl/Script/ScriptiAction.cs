@@ -142,15 +142,23 @@ public class ScriptAction: BaseAsset
         assetPropertyType = (AssetProperty.AssetPropertyType)binaryReader.ReadByte();
         nameIndex = binaryReader.ReadUInt24();
         contentName = context.GetDeclaredString(nameIndex);
+        
+        // Console.WriteLine($"=====================");
+        // Console.WriteLine($"command word: {contentName}");
+        // Console.WriteLine($"editor number: {contentType}");
+        
+        
 
         var argCnt = binaryReader.ReadInt32();
+        // Console.WriteLine($"argument count: {argCnt}");
+        // Console.WriteLine("args:");
         
         var scriptDeclareModel = ScriptDeclareModel;
         if (scriptDeclareModel.Arguments.Count != argCnt)
         {
             throw new ArgumentException($"Script condition argument count mismatch for {contentName}: expected {scriptDeclareModel.Arguments.Count}, got {argCnt}");
         }
-
+        
         if (scriptDeclareModel.EditorNumber != contentType)
         {
             throw new ArgumentException($"Script condition content type mismatch for {contentName}: expected {scriptDeclareModel.EditorNumber}, got {contentType}");
@@ -159,6 +167,7 @@ public class ScriptAction: BaseAsset
         for (int i = 0; i < argCnt; i++)
         {
             Arguments.Add(ScriptArgument.FromBinaryReader(binaryReader, context, scriptDeclareModel.Arguments[i]));
+            // Arguments.Add(ScriptArgument.FromBinaryReader(binaryReader, context, null));
         }
         ObservableUtil.Subscribe(Arguments, this);
 

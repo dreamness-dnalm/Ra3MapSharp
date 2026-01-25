@@ -141,6 +141,8 @@ public class ScriptArgument: Ra3MapWritable
         
         asset.ArgumentType = (int)binaryReader.ReadUInt32();
         binaryWriter.Write(asset.ArgumentType);
+        
+        // Console.WriteLine($"typeNumber: {asset.ArgumentType}");
 
         if (asset.argumentType != argumentModel.TypeNumber)
         {
