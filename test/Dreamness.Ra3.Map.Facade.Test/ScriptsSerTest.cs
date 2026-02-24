@@ -1,3 +1,4 @@
+using System.Reflection;
 using Dreamness.Ra3.Map.Facade.Core;
 using Dreamness.Ra3.Map.Facade.Util;
 
@@ -31,7 +32,7 @@ public class ScriptsSerTest
     [Test]
     public void test3()
     {
-        var mapName = "[cor_samsara]ep11J_Kamikayama_demo1";
+        var mapName = "demo1";
         // var mapName = "NewMap210";
         var ra3Map = Ra3MapFacade.Open(Ra3PathUtil.RA3MapFolder, mapName);
 
@@ -67,10 +68,17 @@ public class ScriptsSerTest
         
         Console.WriteLine("datasize: {0} vs {1}", scriptList1.DataSize, scriptList2.DataSize);
 
-        for (int i = 0; i < scriptList2.DataSize; i++)
-        {
-            Console.WriteLine($"{i}th: {scriptList1.Data[i]} vs {scriptList2.Data[i]}");
-        }
+        // for (int i = 0; i < scriptList2.DataSize; i++)
+        // {
+        //     Console.WriteLine($"{i}th: {scriptList1.Data[i]} vs {scriptList2.Data[i]}");
+        // }
+        
+    }
+
+    [Test]
+    public void test6()
+    {
+        Assembly.GetExecutingAssembly().GetManifestResourceNames().ToList().ForEach(name => Console.WriteLine(name));
         
     }
     

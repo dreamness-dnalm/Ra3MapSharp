@@ -19,12 +19,15 @@
     </ItemGroup>
 
     <ItemGroup>
-      <None Update="data\script_declare\ScriptAction.json">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </None>
-      <None Update="data\script_declare\ScriptConditon.json">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </None>
+      <None Remove="data\script_declare\ScriptConditon.json" />
+      <None Remove="data\script_declare\ScriptAction.json" />
+      <EmbeddedResource Include="data\script_declare\ScriptAction.json"
+      LogicalName="data\script_declare\ScriptAction.json"
+      />
+      <None Remove="data\script_declare\ScriptCondition.json" />
+      <EmbeddedResource Include="data\script_declare\ScriptCondition.json"
+      LogicalName="data\script_declare\ScriptCondition.json"
+      />
     </ItemGroup>
 
 </Project>
