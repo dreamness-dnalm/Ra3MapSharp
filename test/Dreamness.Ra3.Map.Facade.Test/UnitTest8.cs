@@ -9,22 +9,35 @@ public class UnitTest8
     [Test]
     public void tile()
     {
-        var ra3Map = Ra3MapFacade.NewMap(500, 500, 0);
+        var ra3Map = Ra3MapFacade.NewMap(playableWidth:500, playableHeight:500, border:0, initPlayerStartWaypointCnt:0);
         
 
+        for(int x = 100; x < 400; x++)
+        {
+            for(int y = 100; y < 400; y++)
+            {
+                ra3Map.SetTerrainHeight(x, y, 300);
+            }
+        }
         
         for(int x = 100; x < 400; x++)
         {
             for(int y = 100; y < 400; y++)
             {
-                ra3Map.SetTileTexture(x, y, TextureEnum.Grass_CapeCod01.ToString());
+                ra3Map.SetTileTexture(x, y, "Grass_CapeCod01");
             }
         }
         
+        ra3Map.AddPlayerStartWaypoint(playerIndex:1, x: 1500f, y:1500f);
+        
+        ra3Map.UpdatePassabilityMap();
+        
         ra3Map.AutoDetectBlendsEntireMap();
-        
-        
-        ra3Map.SaveAs(Ra3PathUtil.RA3MapFolder, "u_05", false);
+
+        var o = ra3Map.AddUnitObject(typeName:"abc", x:1000f, y:1500f);
+        o.Angle = 45f;
+
+        ra3Map.SaveAs(Ra3PathUtil.RA3MapFolder, "u_05");
     }
 
     [Test]
