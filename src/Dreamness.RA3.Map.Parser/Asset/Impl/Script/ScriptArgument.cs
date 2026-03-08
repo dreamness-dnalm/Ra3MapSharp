@@ -98,10 +98,11 @@ public class ScriptArgument: Ra3MapWritable
         ArgumentModel = argumentModel;
     }
 
-    public static ScriptArgument Of(ArgumentModel argumentModel, string value)
+    public static ScriptArgument Of(ArgumentModel argumentModel, string value, bool requireUtf8=false)
     {
         var scriptArgument = new ScriptArgument(argumentModel);
         scriptArgument.ArgumentType = argumentModel.TypeNumber;
+        scriptArgument._requireUtf8 = requireUtf8;
         switch (argumentModel.RealType)
         {
             case "String":
@@ -131,13 +132,16 @@ public class ScriptArgument: Ra3MapWritable
 
         return scriptArgument;
     }
+    
+    protected bool _requireUtf8 = false;
 
-    public static ScriptArgument FromBinaryReader(BinaryReader binaryReader, BaseContext context, ArgumentModel argumentModel)
+    public static ScriptArgument FromBinaryReader(BinaryReader binaryReader, BaseContext context, ArgumentModel argumentModel, bool requireUtf8=false)
     {
         using var memoryStream = new MemoryStream();
         using var binaryWriter = new BinaryWriter(memoryStream);
         
         var asset = new ScriptArgument(argumentModel);
+        asset._requireUtf8 = requireUtf8;
         
         asset.ArgumentType = (int)binaryReader.ReadUInt32();
         binaryWriter.Write(asset.ArgumentType);
@@ -157,7 +161,15 @@ public class ScriptArgument: Ra3MapWritable
         {
             asset.intValue = binaryReader.ReadInt32();
             asset.FloatValue = binaryReader.ReadSingle();
-            asset.StringValue = binaryReader.ReadDefaultString();
+            // asset.StringValue = binaryReader.ReadDefaultString();
+            if (requireUtf8)
+            {
+                asset.StringValue = binaryReader.ReadUtf8String();
+            }
+            else
+            {
+                asset.StringValue = binaryReader.ReadDefaultString();
+            }
         }
         ObservableUtil.Subscribe(asset.position, asset);
         
@@ -185,7 +197,15 @@ public class ScriptArgument: Ra3MapWritable
             {
                 binaryWriter.Write(IntValue);
                 binaryWriter.Write(FloatValue);
-                binaryWriter.WriteDefaultString(StringValue);
+                // binaryWriter.WriteDefaultString(StringValue);
+                if (_requireUtf8)
+                {
+                    binaryWriter.WriteUtf8String(StringValue);
+                }
+                else
+                {
+                    binaryWriter.WriteDefaultString(StringValue);
+                }
             }
             
             binaryWriter.Flush();

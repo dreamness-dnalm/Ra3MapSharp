@@ -119,7 +119,7 @@ public class ScriptAction: BaseAsset
         {
             var argModel = scriptDeclareModel.Arguments[i];
             var argValue = arguments[i];
-            var arg = ScriptArgument.Of(argModel, argValue);
+            var arg = ScriptArgument.Of(argModel, argValue, name == "DEBUG_MESSAGE_BOX");
             action.Arguments.Add(arg);
         }
         
@@ -166,7 +166,7 @@ public class ScriptAction: BaseAsset
 
         for (int i = 0; i < argCnt; i++)
         {
-            Arguments.Add(ScriptArgument.FromBinaryReader(binaryReader, context, scriptDeclareModel.Arguments[i]));
+            Arguments.Add(ScriptArgument.FromBinaryReader(binaryReader, context, scriptDeclareModel.Arguments[i], contentName == "DEBUG_MESSAGE_BOX"));
             // Arguments.Add(ScriptArgument.FromBinaryReader(binaryReader, context, null));
         }
         ObservableUtil.Subscribe(Arguments, this);

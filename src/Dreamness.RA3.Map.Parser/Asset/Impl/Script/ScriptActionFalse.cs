@@ -34,7 +34,7 @@ public class ScriptActionFalse: ScriptAction
         {
             var argModel = scriptDeclareModel.Arguments[i];
             var argValue = arguments[i];
-            var arg = ScriptArgument.Of(argModel, argValue);
+            var arg = ScriptArgument.Of(argModel, argValue, name == "DEBUG_MESSAGE_BOX");
             action.Arguments.Add(arg);
         }
         

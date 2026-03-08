@@ -9,9 +9,11 @@ public static class StreamExtension
     {
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         gbkEncoding = Encoding.GetEncoding("GBK");
+        utf8Encoding = Encoding.GetEncoding("UTF-8");
     }
     
     private static Encoding gbkEncoding = null;
+    private static Encoding utf8Encoding = null;
     
     public static string ReadDefaultString(this BinaryReader br)
     {
@@ -24,6 +26,12 @@ public static class StreamExtension
     {
         ushort len = br.ReadUInt16();
         return Encoding.Unicode.GetString(br.ReadBytes(len * 2));
+    }
+
+    public static string ReadUtf8String(this BinaryReader br)
+    {
+        ushort len = br.ReadUInt16();
+        return utf8Encoding.GetString(br.ReadBytes(len));
     }
     
     public static Vec3D ReadVec3D(this BinaryReader br)
@@ -63,6 +71,13 @@ public static class StreamExtension
         
         var bytes = Encoding.Unicode.GetBytes(str);
         bw.Write((ushort)(bytes.Length / 2));
+        bw.Write(bytes);
+    }
+
+    public static void WriteUtf8String(this BinaryWriter bw, string str)
+    {
+        var bytes = utf8Encoding.GetBytes(str);
+        bw.Write((ushort)(bytes.Length));
         bw.Write(bytes);
     }
     
