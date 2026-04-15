@@ -182,7 +182,7 @@ public class ObjectAsset: BaseAsset
         _roadOption = binaryReader.ReadInt32();
         _typeName = binaryReader.ReadDefaultString();
         Properties = AssetProperties.FromBinaryReader(binaryReader, context);
-        ObservableUtil.Subscribe(_position, this);
+        ObservableUtil.Subscribe(Properties, this);
     }
 
     protected override byte[] Deparse(BaseContext context)

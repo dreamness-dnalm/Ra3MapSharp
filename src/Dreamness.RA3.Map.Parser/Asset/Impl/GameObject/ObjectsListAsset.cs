@@ -163,7 +163,7 @@ public class ObjectsListAsset: BaseAsset
                 var waypointId = mapObject.Properties.GetProperty<int>("waypointID");
                 maxWaypointId = Math.Max(maxWaypointId, waypointId);
             }
-            MapObjectList.Add(mapObject);
+            MapObjectList.Add(mapObject, ignoreModified: true);
         }
 
         maxObjectId = MapObjectList.Count;

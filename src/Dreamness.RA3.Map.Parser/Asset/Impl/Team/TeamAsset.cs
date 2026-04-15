@@ -75,7 +75,7 @@ public class TeamAsset: Ra3MapWritable
         var teamAsset = new TeamAsset();
 
         teamAsset.Properties = AssetProperties.FromBinaryReader(binaryReader, context);
-        ObservableUtil.Subscribe(teamAsset, teamAsset.Properties);
+        ObservableUtil.Subscribe(teamAsset.Properties, teamAsset);
         binaryWriter.Write(teamAsset.Properties.ToBytes(context));
 
         binaryWriter.Flush();
