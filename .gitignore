@@ -5,3 +5,5 @@
 .vscode
 *.sln.DotSettings.user
 artifacts
+.dotnet6/
+.dotnet-cli-home/
