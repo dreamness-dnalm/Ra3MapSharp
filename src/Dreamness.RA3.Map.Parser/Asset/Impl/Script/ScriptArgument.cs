@@ -143,8 +143,8 @@ public class ScriptArgument: Ra3MapWritable
         var asset = new ScriptArgument(argumentModel);
         asset._requireUtf8 = requireUtf8;
         
-        asset.ArgumentType = (int)binaryReader.ReadUInt32();
-        binaryWriter.Write(asset.ArgumentType);
+        asset.argumentType = (int)binaryReader.ReadUInt32();
+        binaryWriter.Write((uint)asset.argumentType);
         
         // Console.WriteLine($"typeNumber: {asset.ArgumentType}");
 
@@ -156,19 +156,24 @@ public class ScriptArgument: Ra3MapWritable
         if (asset.ArgumentType == 16)
         {
             asset.position = binaryReader.ReadVec3D();
+            binaryWriter.WriteVec3D(asset.position, context);
         }
         else
         {
             asset.intValue = binaryReader.ReadInt32();
-            asset.FloatValue = binaryReader.ReadSingle();
-            // asset.StringValue = binaryReader.ReadDefaultString();
+            asset.floatValue = binaryReader.ReadSingle();
+            binaryWriter.Write(asset.intValue);
+            binaryWriter.Write(asset.floatValue);
+
             if (requireUtf8)
             {
-                asset.StringValue = binaryReader.ReadUtf8String();
+                asset.stringValue = binaryReader.ReadUtf8String();
+                binaryWriter.WriteUtf8String(asset.stringValue);
             }
             else
             {
-                asset.StringValue = binaryReader.ReadDefaultString();
+                asset.stringValue = binaryReader.ReadDefaultString();
+                binaryWriter.WriteDefaultString(asset.stringValue);
             }
         }
         ObservableUtil.Subscribe(asset.position, asset);
