@@ -171,7 +171,9 @@ public class ScriptConditionContent: BaseAsset
 
         for (int i = 0; i < argCnt; i++)
         {
-            Arguments.Add(ScriptArgument.FromBinaryReader(binaryReader, context, scriptDeclareModel.Arguments[i]));
+            Arguments.Add(
+                ScriptArgument.FromBinaryReader(binaryReader, context, scriptDeclareModel.Arguments[i]),
+                ignoreModified: true);
         }
         ObservableUtil.Subscribe(Arguments, this);
 

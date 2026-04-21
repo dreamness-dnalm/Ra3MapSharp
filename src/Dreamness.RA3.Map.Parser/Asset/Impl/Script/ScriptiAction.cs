@@ -166,7 +166,13 @@ public class ScriptAction: BaseAsset
 
         for (int i = 0; i < argCnt; i++)
         {
-            Arguments.Add(ScriptArgument.FromBinaryReader(binaryReader, context, scriptDeclareModel.Arguments[i], contentName == "DEBUG_MESSAGE_BOX"));
+            Arguments.Add(
+                ScriptArgument.FromBinaryReader(
+                    binaryReader,
+                    context,
+                    scriptDeclareModel.Arguments[i],
+                    contentName == "DEBUG_MESSAGE_BOX"),
+                ignoreModified: true);
             // Arguments.Add(ScriptArgument.FromBinaryReader(binaryReader, context, null));
         }
         ObservableUtil.Subscribe(Arguments, this);

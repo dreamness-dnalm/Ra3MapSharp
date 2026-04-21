@@ -115,6 +115,9 @@ public class ScriptGroup: BaseAsset
                     $"Unexpected asset type in ScriptList: {asset.GetType().Name}. Expected Script or ScriptGroup.");
             }
         }
+
+        ObservableUtil.Subscribe(Scripts, this);
+        ObservableUtil.Subscribe(ScriptGroups, this);
         
     }
 
