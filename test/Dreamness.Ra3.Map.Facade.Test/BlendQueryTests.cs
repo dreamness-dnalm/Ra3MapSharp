@@ -70,10 +70,11 @@ public class BlendQueryTests
     public void GetBlendDetailInfo_WithBlend_ReturnsCompleteInfo()
     {
         // Arrange - 在草地边界应该有混合
-        int x = 20, y = 20;
+        var blendPosition = _testMap!.GetAllBlendPositions().First();
+        int x = blendPosition.X, y = blendPosition.Y;
 
         // Act
-        var detailInfo = _testMap!.GetBlendDetailInfo(x, y);
+        var detailInfo = _testMap.GetBlendDetailInfo(x, y);
 
         // Assert
         Assert.That(detailInfo, Is.Not.Null, "Should return detail info when blend exists");

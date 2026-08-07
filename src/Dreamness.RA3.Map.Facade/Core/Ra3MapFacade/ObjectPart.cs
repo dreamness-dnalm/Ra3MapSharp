@@ -66,7 +66,7 @@ public partial class Ra3MapFacade
         }
         else if (o is PlayerData playerData)
         {
-            _sideListAsset.PlayerDataList.Remove(playerData);
+            ra3Map.Context.RemoveSide(playerData);
         }
         else if (o is TeamAsset teamAsset)
         {
@@ -100,7 +100,7 @@ public partial class Ra3MapFacade
             .Select(o => o as UnitObjectWrap)
             .ToList();
     }
-    
+
     /// <summary>
     /// 添加单位物体
     /// </summary>
@@ -114,7 +114,7 @@ public partial class Ra3MapFacade
         var o = _objectsList.AddObj(ra3Map.Context, typeName, new Vec3D(x, y, z));
         return UnitObjectWrap.Of(o) as UnitObjectWrap;
     }
-    
+
     // ------------- waypoint ----------------
 
     /// <summary>

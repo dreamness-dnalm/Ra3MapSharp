@@ -1,6 +1,8 @@
 using Dreamness.Ra3.Map.Parser.Asset.Base;
 using Dreamness.Ra3.Map.Parser.Asset.Impl.Default;
 using Dreamness.Ra3.Map.Parser.Asset.Impl.GameObject;
+using Dreamness.Ra3.Map.Parser.Asset.Impl.Lighting;
+using Dreamness.Ra3.Map.Parser.Asset.Impl.PostEffect;
 using Dreamness.RA3.Map.Parser.Asset.Impl.MissionObjective;
 using Dreamness.Ra3.Map.Parser.Asset.Impl.Player;
 using Dreamness.Ra3.Map.Parser.Asset.Impl.Script;
@@ -9,7 +11,10 @@ using Dreamness.Ra3.Map.Parser.Asset.Impl.Terrain;
 using Dreamness.Ra3.Map.Parser.Asset.Impl.Texture;
 using Dreamness.Ra3.Map.Parser.Asset.Impl.Unknown;
 using Dreamness.Ra3.Map.Parser.Asset.Impl.World;
+using Dreamness.Ra3.Map.Parser.Asset.Impl.Water;
+using Dreamness.Ra3.Map.Parser.Asset.SubAsset.Impl.Unknown;
 using Dreamness.Ra3.Map.Parser.Core.Base;
+using Dreamness.Ra3.Map.Parser.Util;
 
 namespace Dreamness.Ra3.Map.Parser.Asset.Util;
 
@@ -17,12 +22,24 @@ public static class AssetParser
 {
     public static BaseAsset FromBinaryReader(BinaryReader binaryReader, BaseContext context)
     {
+        if (binaryReader.BaseStream.Length - binaryReader.BaseStream.Position < 10)
+        {
+            throw new InvalidDataException("Truncated asset header.");
+        }
+
         BaseAsset asset = new DefaultAsset();
         asset.Id = binaryReader.ReadInt32();
         asset.Version = binaryReader.ReadInt16();
         asset.DataSize = binaryReader.ReadInt32();
+        var remaining = binaryReader.BaseStream.Length - binaryReader.BaseStream.Position;
+        if (asset.DataSize < 0 || asset.DataSize > remaining || asset.DataSize > MapFileCodec.MaxAssetDataSize)
+        {
+            throw new InvalidDataException(
+                $"Invalid asset data size {asset.DataSize}; {remaining} bytes remain in the containing stream.");
+        }
+
         asset.AssetType = context.GetDeclaredString(asset.Id);
-        asset.Data = binaryReader.ReadBytes(asset.DataSize);
+        asset.Data = binaryReader.ReadBytesExactly(asset.DataSize, $"{asset.AssetType} asset payload");
 
         switch (asset.AssetType)
         {
@@ -95,25 +112,49 @@ public static class AssetParser
                 asset = asset.Clone<MissionObjectivesAsset>();
                 (asset as MissionObjectivesAsset)?.ParseTolerance(context);
                 break;
+            case AssetNameConst.MPPositionList:
+                asset = asset.Clone<MPPositionListAsset>();
+                (asset as MPPositionListAsset)?.ParseTolerance(context);
+                break;
+            case AssetNameConst.MPPositionInfo:
+                asset = asset.Clone<MPPositionInfo>();
+                (asset as MPPositionInfo)?.ParseTolerance(context);
+                break;
+            case AssetNameConst.LibraryMapLists:
+                asset = asset.Clone<LibraryMapListsAsset>();
+                (asset as LibraryMapListsAsset)?.ParseTolerance(context);
+                break;
+            case AssetNameConst.LibraryMaps:
+                asset = asset.Clone<LibraryMaps>();
+                (asset as LibraryMaps)?.ParseTolerance(context);
+                break;
+            case AssetNameConst.BuildLists:
+                asset = asset.Clone<BuildListsAsset>();
+                (asset as BuildListsAsset)?.ParseTolerance(context);
+                break;
+            case AssetNameConst.StandingWaterAreas:
+                asset = asset.Clone<StandingWaterAreasAsset>();
+                (asset as StandingWaterAreasAsset)?.ParseTolerance(context);
+                break;
+            case AssetNameConst.GlobalWaterSettings:
+                asset = asset.Clone<GlobalWaterSettingsAsset>();
+                (asset as GlobalWaterSettingsAsset)?.ParseTolerance(context);
+                break;
+            case AssetNameConst.GlobalLighting:
+                asset = asset.Clone<GlobalLightingAsset>();
+                (asset as GlobalLightingAsset)?.ParseTolerance(context);
+                break;
+            case AssetNameConst.PostEffectsChunk:
+                asset = asset.Clone<PostEffectsChunkAsset>();
+                (asset as PostEffectsChunkAsset)?.ParseTolerance(context);
+                break;
             
             case AssetNameConst.BlendTileData:
                 asset = asset.Clone<BlendTileDataAsset>();
                 (asset as BlendTileDataAsset)?.ParseTolerance(context);
                 break;
-            // case AssetConst.StandingWaterAreas:
-            //     asset = asset.Clone<StandingWaterAreasAsset>();
-            //     (asset as StandingWaterAreasAsset)?.Parse(context);
-            //     break;
-            // case AssetConst.GlobalLighting:
-            //     asset = asset.Clone<GlobalLightingAsset>();
-            //     (asset as GlobalLightingAsset)?.Parse(context);
-            //     break;
-                // case AssetConst.BuildLists:
-                //     asset = asset.Clone<BuildListsAsset>();
-                //     (asset as BuildListsAsset)?.Parse(context);
-                //     break;
             default:
-                (asset as DefaultAsset).ParseTolerance(context);
+                ((DefaultAsset)asset).ParseTolerance(context);
                 break;
             
             // TODO rich ObjectsList  , BlendTileData, PlayerScriptsList

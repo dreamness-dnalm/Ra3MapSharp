@@ -159,6 +159,10 @@ public class AssetProperties: Ra3MapWritable
         using var binaryReader = new BinaryReader(memoryStream);
 
         var cnt = binaryReader.ReadInt16();
+        if (cnt < 0)
+        {
+            throw new InvalidDataException($"Invalid property count: {cnt}.");
+        }
         // properties.Data = binaryReader.ReadBytes(bytes.Length - 2);
 
         using var memoryStream2 = new MemoryStream(binaryReader.ReadBytes(bytes.Length - 2));
@@ -182,6 +186,10 @@ public class AssetProperties: Ra3MapWritable
         using var binaryWriter = new BinaryWriter(memoryStream);
         
         var cnt = binaryReader.ReadInt16();
+        if (cnt < 0)
+        {
+            throw new InvalidDataException($"Invalid property count: {cnt}.");
+        }
         binaryWriter.Write(cnt);
 
         for (int i = 0; i < cnt; i++)

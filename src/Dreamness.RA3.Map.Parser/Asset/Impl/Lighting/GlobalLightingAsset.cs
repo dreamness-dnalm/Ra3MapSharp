@@ -26,7 +26,7 @@ public class GlobalLightingAsset: BaseAsset
     
     public WritableList<GlobalLightingConfig> Configs { get; private set; } = new WritableList<GlobalLightingConfig>();
     
-    private MapColorArgb shadowColor;
+    private MapColorArgb shadowColor = null!;
 
     public MapColorArgb ShadowColor
     {
@@ -42,7 +42,7 @@ public class GlobalLightingAsset: BaseAsset
         }
     }
 
-    public ColorRgbF noCloudFactor;
+    public ColorRgbF noCloudFactor = null!;
     
     public ColorRgbF NoCloudFactor
     {
@@ -83,6 +83,11 @@ public class GlobalLightingAsset: BaseAsset
         shadowColor = MapColorArgb.FromBinaryReader(reader);
 
         noCloudFactor = reader.ReadColorRgbF();
+
+        if (reader.BaseStream.Position != reader.BaseStream.Length)
+        {
+            throw new InvalidDataException("GlobalLighting contains trailing data.");
+        }
         
     }
 

@@ -5,6 +5,7 @@ namespace Dreamness.Ra3.Map.Parser.Asset.Impl.Default;
 
 public class DefaultAsset: BaseAsset
 {
+    public override bool IsSupported => false;
 
     public override short GetVersion()
     {

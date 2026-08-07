@@ -41,6 +41,10 @@ public abstract class ObjectWrap
         {
             return new WaypointWrap(obj);
         }
+        else if (obj.IsRoad)
+        {
+            return new RoadObjectWrap(obj);
+        }
         else
         {
             return new UnitObjectWrap(obj);

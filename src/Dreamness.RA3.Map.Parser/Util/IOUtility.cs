@@ -6,6 +6,14 @@ public class IOUtility
 {
     public static T[,] ReadArray<T>(BinaryReader br, int width, int height) where T : struct
     {
+        ValidateArrayDimensions(width, height);
+        var expectedBytes = GetSerializedByteCount<T>(width, height);
+        if (br.BaseStream.CanSeek && br.BaseStream.Length - br.BaseStream.Position < expectedBytes)
+        {
+            throw new EndOfStreamException(
+                $"Truncated {typeof(T).Name}[{width},{height}] array: expected {expectedBytes} bytes.");
+        }
+
         T[,] array = new T[width, height];
         Type type = typeof(T);
         if (type == typeof(bool))
@@ -110,5 +118,33 @@ public class IOUtility
                 throw new System.Exception($"Type: {type.Name} is not supported for method WriteArray");
             }
         }
+    }
+
+    private static void ValidateArrayDimensions(int width, int height)
+    {
+        if (width <= 0 || height <= 0 || width > 16_384 || height > 16_384)
+        {
+            throw new InvalidDataException($"Invalid array dimensions: {width} x {height}.");
+        }
+
+        var cells = (long)width * height;
+        if (cells > 64_000_000)
+        {
+            throw new InvalidDataException($"Array contains too many elements: {cells}.");
+        }
+    }
+
+    private static long GetSerializedByteCount<T>(int width, int height) where T : struct
+    {
+        if (typeof(T) == typeof(bool))
+        {
+            return ((long)width + 7) / 8 * height;
+        }
+
+        var elementSize = typeof(T) == typeof(byte) ? 1
+            : typeof(T) == typeof(short) || typeof(T) == typeof(ushort) ? 2
+            : typeof(T) == typeof(int) ? 4
+            : throw new NotSupportedException($"Type {typeof(T).Name} is not supported by ReadArray.");
+        return (long)width * height * elementSize;
     }
 }

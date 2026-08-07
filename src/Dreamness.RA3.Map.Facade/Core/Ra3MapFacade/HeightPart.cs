@@ -111,7 +111,7 @@ public partial class Ra3MapFacade
     /// <returns></returns>
     public List<BorderData> GetBorders()
     {
-        return Borders.GetAssets();
+        return Borders.GetAssets().ToList();
     }
     
     /// <summary>
