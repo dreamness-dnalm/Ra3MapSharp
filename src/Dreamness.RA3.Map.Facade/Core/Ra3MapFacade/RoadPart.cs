@@ -12,8 +12,9 @@ public partial class Ra3MapFacade
     /// </summary>
     public List<RoadObjectWrap> GetRoadObjects()
     {
-        return GetAllObjects()
-            .OfType<RoadObjectWrap>()
+        return _objectsList
+            .GetRoadObjects()
+            .Select(o => new RoadObjectWrap(o))
             .ToList();
     }
 

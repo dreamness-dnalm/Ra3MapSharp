@@ -10,28 +10,9 @@ public partial class Ra3MapFacade
 {
     private ObjectsListAsset _objectsList { get; set; }
 
-    private List<ObjectWrap> GetAllObjects()
-    {
-        return _objectsList
-            .MapObjectList
-            .Select(o => ObjectWrap.Of(o))
-            .ToList();
-    }
-
     private ObjectAsset? GetObjectByUniqueId(string uniqueId)
     {
-        var objectAssets = GetAllObjects()
-            .Where(o => o.UniqueId == uniqueId)
-            .Select(o => o.Obj)
-            .ToList();
-        if (objectAssets.Count == 0)
-        {
-            return null;
-        }
-        else
-        {
-            return objectAssets[0];
-        }
+        return _objectsList.MapObjectList.FirstOrDefault(o => o.UniqueId == uniqueId);
     }
 
     /// <summary>
@@ -95,9 +76,9 @@ public partial class Ra3MapFacade
     /// <returns></returns>
     public List<UnitObjectWrap> GetUnitObjects()
     {
-        return GetAllObjects()
-            .Where(o => o is UnitObjectWrap)
-            .Select(o => o as UnitObjectWrap)
+        return _objectsList
+            .GetRegularObjects()
+            .Select(o => new UnitObjectWrap(o))
             .ToList();
     }
 
@@ -123,9 +104,9 @@ public partial class Ra3MapFacade
     /// <returns></returns>
     public List<WaypointWrap> GetWaypoints()
     {
-        return GetAllObjects()
-            .Where(o => o is WaypointWrap)
-            .Select(o => o as WaypointWrap)
+        return _objectsList
+            .GetWaypointObjects()
+            .Select(o => new WaypointWrap(o))
             .ToList();
     }
     

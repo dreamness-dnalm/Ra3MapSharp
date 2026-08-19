@@ -41,5 +41,5 @@ public sealed class RoadObjectWrap : ObjectWrap
         }
     }
 
-    public static RoadObjectWrap Of(ObjectAsset obj) => new(obj);
+    public new static RoadObjectWrap Of(ObjectAsset obj) => new(obj);
 }

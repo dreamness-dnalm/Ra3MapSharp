@@ -14,11 +14,13 @@ public class RoadAbstractionTests
             var map = Ra3MapFacade.NewMap(32, 32, 4, 0);
             var road = map.AddRoadObject("YucatanDirtRoad01", 100, 120, angle: 30, roadOption: 194);
             map.AddUnitObject("AlliedPowerPlant", 150, 160);
+            map.AddWaypoint("RoadSplitWaypoint", 180, 190);
 
             Assert.Multiple(() =>
             {
                 Assert.That(map.GetRoadObjects(), Has.Count.EqualTo(1));
                 Assert.That(map.GetUnitObjects(), Has.Count.EqualTo(1));
+                Assert.That(map.GetWaypoints(), Has.Count.EqualTo(1));
                 Assert.That(road.Options.RawValue, Is.EqualTo(194));
             });
 
@@ -29,7 +31,9 @@ public class RoadAbstractionTests
 
             Assert.Multiple(() =>
             {
+                Assert.That(reopened.GetRoadObjects(), Has.Count.EqualTo(1));
                 Assert.That(reopened.GetUnitObjects(), Has.Count.EqualTo(1));
+                Assert.That(reopened.GetWaypoints(), Has.Count.EqualTo(1));
                 Assert.That(reopenedRoad.TypeName, Is.EqualTo("YucatanDirtRoad01"));
                 Assert.That(reopenedRoad.Options.RawValue, Is.EqualTo(194));
                 Assert.That(reopenedRoad.Angle, Is.EqualTo(30).Within(0.001));

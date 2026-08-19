@@ -16,6 +16,30 @@ public class ObjectsListAsset: BaseAsset
     private int maxWaypointId = -1;
 
     private int maxObjectId = -1;
+
+    /// <summary>
+    /// Gets ordinary objects, excluding waypoints and WorldBuilder road nodes.
+    /// </summary>
+    public IEnumerable<ObjectAsset> GetRegularObjects()
+    {
+        return MapObjectList.Where(asset => !asset.IsWaypoint && !asset.IsRoad);
+    }
+
+    /// <summary>
+    /// Gets waypoint objects only.
+    /// </summary>
+    public IEnumerable<ObjectAsset> GetWaypointObjects()
+    {
+        return MapObjectList.Where(asset => asset.IsWaypoint);
+    }
+
+    /// <summary>
+    /// Gets WorldBuilder road nodes only.
+    /// </summary>
+    public IEnumerable<ObjectAsset> GetRoadObjects()
+    {
+        return MapObjectList.Where(asset => asset.IsRoad);
+    }
     
     // TODO: 路径点类型
     private ObjectAsset AddWaypoint(int id, string name, Vec3D position, BaseContext context)

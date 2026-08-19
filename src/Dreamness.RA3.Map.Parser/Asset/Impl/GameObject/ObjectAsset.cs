@@ -75,7 +75,8 @@ public class ObjectAsset: BaseAsset
     
     public bool IsWaypoint => _typeName == "*Waypoints/Waypoint";
 
-    public bool IsRoad => _roadOption != 0;
+    // Waypoints take precedence so the three public object categories never overlap.
+    public bool IsRoad => !IsWaypoint && _roadOption != 0;
     
     public override short GetVersion()
     {
