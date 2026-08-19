@@ -58,6 +58,20 @@ public class StandingWaterAreasAsset: BaseAsset
     {
         var asset = new StandingWaterAreasAsset();
         asset.ApplyBasicInfo(context);
+
+        asset.StandingWaterAreas.Add(
+            StandingWaterArea.Of(
+                1,
+                "",
+                0.0600000024f,
+                new[]
+                {
+                    new Vec2D(-border * 10, -border * 10),
+                    new Vec2D(-border * 10, (playableHeight + border) * 10),
+                    new Vec2D((playableWidth + border) * 10, (playableHeight + border) * 10),
+                    new Vec2D((playableWidth + border) * 10, -border * 10)
+                },
+                200));
         ObservableUtil.Subscribe(asset.StandingWaterAreas, asset);
         
         asset.MarkModified();

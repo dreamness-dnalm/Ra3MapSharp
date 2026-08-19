@@ -33,6 +33,10 @@ public class ParserReliabilityTests
                 Assert.That(map.Context.BuildListsAsset.BuildLists.Count, Is.EqualTo(17));
                 Assert.That(map.Context.LibraryMapListsAsset.LibraryMapsList.Count, Is.EqualTo(17));
                 Assert.That(map.Context.AssetDict.Values.All(asset => asset.Id > 0), Is.True);
+                Assert.That(map.Context.StandingWaterAreasAsset.StandingWaterAreas.Count, Is.EqualTo(1));
+                Assert.That(map.Context.StandingWaterAreasAsset.StandingWaterAreas[0].WaterHeight, Is.EqualTo(200));
+                Assert.That(map.Context.GlobalWaterSettingsAsset.Reflection, Is.True);
+                Assert.That(map.Context.GlobalWaterSettingsAsset.ReflectionPlaneHeight, Is.EqualTo(200f));
             });
 
             var path = Path.Combine(tempDir, "new.map");
@@ -46,6 +50,10 @@ public class ParserReliabilityTests
                 Assert.That(reopened.Context.BuildListsAsset.BuildLists.Count, Is.EqualTo(17));
                 Assert.That(reopened.Context.LibraryMapListsAsset.LibraryMapsList.Count, Is.EqualTo(17));
                 Assert.That(map.MapFilePath, Is.EqualTo(Path.GetFullPath(path)));
+                Assert.That(reopened.Context.StandingWaterAreasAsset.StandingWaterAreas.Count, Is.EqualTo(1));
+                Assert.That(reopened.Context.StandingWaterAreasAsset.StandingWaterAreas[0].WaterHeight, Is.EqualTo(200));
+                Assert.That(reopened.Context.GlobalWaterSettingsAsset.Reflection, Is.True);
+                Assert.That(reopened.Context.GlobalWaterSettingsAsset.ReflectionPlaneHeight, Is.EqualTo(200f));
             });
         }
         finally
@@ -453,7 +461,7 @@ public class ParserReliabilityTests
             map.Context.MPPositionListAsset.MPPositionInfos[0].Team = 7;
             map.Context.LibraryMapListsAsset.LibraryMapsList[0].Add("TestLibraryMap");
             map.Context.BuildListsAsset.BuildLists[0].Count = 2;
-            map.Context.GlobalWaterSettingsAsset.Reflection = true;
+            map.Context.GlobalWaterSettingsAsset.ReflectionPlaneHeight = 150f;
             map.Context.GlobalLightingAsset.Time = 123;
             map.Context.PostEffectsChunkAsset.PostEffects[0].Name = "DistortionEdited";
             map.Context.StandingWaterAreasAsset.StandingWaterAreas.Add(
@@ -484,15 +492,15 @@ public class ParserReliabilityTests
                 Assert.That(reopened.Context.LibraryMapListsAsset.LibraryMapsList[0].MapNames,
                     Does.Contain("TestLibraryMap"));
                 Assert.That(reopened.Context.BuildListsAsset.BuildLists[0].Count, Is.EqualTo(2));
-                Assert.That(reopened.Context.GlobalWaterSettingsAsset.Reflection, Is.True);
+                Assert.That(reopened.Context.GlobalWaterSettingsAsset.ReflectionPlaneHeight, Is.EqualTo(150f));
                 Assert.That(reopened.Context.GlobalWaterSettingsAsset.Version,
                     Is.EqualTo(reopened.Context.GlobalWaterSettingsAsset.GetVersion()));
                 Assert.That(reopened.Context.HeightMapDataAsset.Version, Is.EqualTo(99));
                 Assert.That(reopened.Context.GlobalLightingAsset.Time, Is.EqualTo(123));
                 Assert.That(reopened.Context.PostEffectsChunkAsset.PostEffects[0].Name,
                     Is.EqualTo("DistortionEdited"));
-                Assert.That(reopened.Context.StandingWaterAreasAsset.StandingWaterAreas[0].Name,
-                    Is.EqualTo("TestWater"));
+                Assert.That(reopened.Context.StandingWaterAreasAsset.StandingWaterAreas.Select(a => a.Name),
+                    Does.Contain("TestWater"));
             });
         }
         finally

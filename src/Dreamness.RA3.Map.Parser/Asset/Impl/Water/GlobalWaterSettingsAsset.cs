@@ -82,6 +82,8 @@ public class GlobalWaterSettingsAsset: BaseAsset
         var asset = new GlobalWaterSettingsAsset();
         
         asset.ApplyBasicInfo(context);
+        asset.Reflection = true;
+        asset.ReflectionPlaneHeight = 200;
         asset.MarkModified();
         return asset;
     }
