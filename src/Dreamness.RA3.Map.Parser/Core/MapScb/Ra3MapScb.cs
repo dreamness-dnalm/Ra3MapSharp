@@ -7,7 +7,7 @@ public class Ra3MapScb
 {
     private Ra3MapScb(){}
 
-    public string ScbFilePath { get; private set; } = null!;
+    public string? ScbFilePath { get; private set; }
 
     public MapScbContext Context = new MapScbContext();
 
@@ -52,14 +52,23 @@ public class Ra3MapScb
         }
         var bytes = File.ReadAllBytes(filePath);
         var mapScb = FromBytes(bytes);
-        mapScb.ScbFilePath = filePath;
+        mapScb.ScbFilePath = Path.GetFullPath(filePath);
         return mapScb;
     }
 
+    /// <summary>
+    /// 将 SCB 保存到指定路径。SCB 默认保存为未压缩格式。
+    /// </summary>
     public void SaveAs(string filePath, bool compress = false)
     {
-        var dirPath = Path.GetDirectoryName(filePath);
-        if (!string.IsNullOrEmpty(dirPath) && !Directory.Exists(dirPath))
+        if (string.IsNullOrWhiteSpace(filePath))
+        {
+            throw new ArgumentException("A non-empty output path is required.", nameof(filePath));
+        }
+
+        var fullPath = Path.GetFullPath(filePath);
+        var dirPath = Path.GetDirectoryName(fullPath);
+        if (!string.IsNullOrEmpty(dirPath))
         {
             Directory.CreateDirectory(dirPath);
         }
@@ -67,29 +76,33 @@ public class Ra3MapScb
         using var memoryStream = new MemoryStream();
         using var binaryWriter = new BinaryWriter(memoryStream);
 
-        byte[] data = Context.ToBytes();
         binaryWriter.Write(CompressConst.UnCompressFlag);
-        binaryWriter.Write(data);
+        binaryWriter.Write(Context.ToBytes());
+        binaryWriter.Flush();
 
-        using var fileStream = File.Create(filePath);
-
+        byte[] output;
         if (compress)
         {
-            byte[] output;
-            memoryStream.GetBuffer().Skip(0).Take((int)memoryStream.Length).ToArray().RefPackCompress(out output);
-            fileStream.Write(output, 0, output.Length);
+            memoryStream.ToArray().RefPackCompress(out output);
         }
         else
         {
-            fileStream.Write(memoryStream.GetBuffer(), 0, (int)memoryStream.Length);
+            output = memoryStream.ToArray();
         }
+
+        File.WriteAllBytes(fullPath, output);
+        ScbFilePath = fullPath;
     }
 
+    /// <summary>
+    /// 保存到当前 SCB 的来源路径。由 <see cref="FromFile"/> 或 <see cref="SaveAs"/> 设置。
+    /// </summary>
     public void Save(bool compress = false)
     {
         if (ScbFilePath == null)
         {
-            throw new System.Exception("ScbFilePath is null, if it's a new scb, use SaveAs method");
+            throw new System.Exception(
+                "ScbFilePath is null, if it's a new scb, use SaveAs method");
         }
 
         SaveAs(ScbFilePath, compress);
