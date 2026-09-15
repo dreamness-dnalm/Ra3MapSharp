@@ -8,30 +8,30 @@ public static class StreamExtension
     static StreamExtension()
     {
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-        DefaultStringEncoding = Encoding.GetEncoding("GBK");
+        gbkEncoding = Encoding.GetEncoding("GBK");
         utf8Encoding = Encoding.GetEncoding("UTF-8");
     }
     
-    public static Encoding DefaultStringEncoding { get; set; } = null!;
-
-    private static Encoding utf8Encoding = null!;
+    private static Encoding gbkEncoding = null;
+    private static Encoding utf8Encoding = null;
     
     public static string ReadDefaultString(this BinaryReader br)
     {
         ushort len = br.ReadUInt16();
-        return DefaultStringEncoding.GetString(br.ReadBytesExactly(len, "default string"));
+        // return Encoding.Default.GetString(br.ReadBytes(len));
+        return gbkEncoding.GetString(br.ReadBytes(len));
     }
     
     public static string ReadUnicodeString(this BinaryReader br)
     {
         ushort len = br.ReadUInt16();
-        return Encoding.Unicode.GetString(br.ReadBytesExactly(len * 2, "Unicode string"));
+        return Encoding.Unicode.GetString(br.ReadBytes(len * 2));
     }
 
     public static string ReadUtf8String(this BinaryReader br)
     {
         ushort len = br.ReadUInt16();
-        return utf8Encoding.GetString(br.ReadBytesExactly(len, "UTF-8 string"));
+        return utf8Encoding.GetString(br.ReadBytes(len));
     }
     
     public static Vec3D ReadVec3D(this BinaryReader br)
@@ -57,34 +57,11 @@ public static class StreamExtension
     
     public static void WriteDefaultString(this BinaryWriter bw, string str)
     {
-        ArgumentNullException.ThrowIfNull(str);
-        var bytes = DefaultStringEncoding.GetBytes(str);
-
-        if (bytes.Length > ushort.MaxValue)
-        {
-            throw new InvalidDataException($"Default string is too long: {bytes.Length} bytes.");
-        }
+        var bytes = gbkEncoding.GetBytes(str);
 
         bw.Write((ushort)bytes.Length);
         // bw.Write(Encoding.Default.GetBytes(str));
         bw.Write(bytes);
-    }
-
-    public static byte[] ReadBytesExactly(this BinaryReader reader, int count, string fieldName = "data")
-    {
-        if (count < 0)
-        {
-            throw new InvalidDataException($"Negative byte count for {fieldName}: {count}.");
-        }
-
-        var bytes = reader.ReadBytes(count);
-        if (bytes.Length != count)
-        {
-            throw new EndOfStreamException(
-                $"Unexpected end of stream while reading {fieldName}: expected {count} bytes, got {bytes.Length}.");
-        }
-
-        return bytes;
     }
     
     public static void WriteUnicodeString(this BinaryWriter bw, string str)

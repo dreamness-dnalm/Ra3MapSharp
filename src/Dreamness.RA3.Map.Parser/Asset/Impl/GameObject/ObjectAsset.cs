@@ -74,9 +74,6 @@ public class ObjectAsset: BaseAsset
     public AssetProperties Properties { get; private set; }
     
     public bool IsWaypoint => _typeName == "*Waypoints/Waypoint";
-
-    // Waypoints take precedence so the three public object categories never overlap.
-    public bool IsRoad => !IsWaypoint && _roadOption != 0;
     
     public override short GetVersion()
     {
@@ -154,20 +151,6 @@ public class ObjectAsset: BaseAsset
             }, context);
         
         asset.MarkModified();
-        return asset;
-    }
-
-    public static ObjectAsset OfRoad(string uniqueId, string typeName, Vec3D position, float angle,
-        RoadOptions options, string belongToTeam, BaseContext context)
-    {
-        if (!options.IsRoad)
-        {
-            throw new ArgumentOutOfRangeException(nameof(options), "A road node must have a non-zero option value.");
-        }
-
-        var asset = OfObj(uniqueId, typeName, position, angle, string.Empty, belongToTeam, context);
-        asset.Properties.RemoveProperty("objectName");
-        asset._roadOption = options.RawValue;
         return asset;
     }
 

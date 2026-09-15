@@ -16,30 +16,6 @@ public class ObjectsListAsset: BaseAsset
     private int maxWaypointId = -1;
 
     private int maxObjectId = -1;
-
-    /// <summary>
-    /// Gets ordinary objects, excluding waypoints and WorldBuilder road nodes.
-    /// </summary>
-    public IEnumerable<ObjectAsset> GetRegularObjects()
-    {
-        return MapObjectList.Where(asset => !asset.IsWaypoint && !asset.IsRoad);
-    }
-
-    /// <summary>
-    /// Gets waypoint objects only.
-    /// </summary>
-    public IEnumerable<ObjectAsset> GetWaypointObjects()
-    {
-        return MapObjectList.Where(asset => asset.IsWaypoint);
-    }
-
-    /// <summary>
-    /// Gets WorldBuilder road nodes only.
-    /// </summary>
-    public IEnumerable<ObjectAsset> GetRoadObjects()
-    {
-        return MapObjectList.Where(asset => asset.IsRoad);
-    }
     
     // TODO: 路径点类型
     private ObjectAsset AddWaypoint(int id, string name, Vec3D position, BaseContext context)
@@ -61,7 +37,7 @@ public class ObjectsListAsset: BaseAsset
         
         MarkModified();
 
-        maxWaypointId = id;
+        maxObjectId = id;
         return asset;
     }
     
@@ -81,7 +57,7 @@ public class ObjectsListAsset: BaseAsset
     
     public ObjectAsset AddPlayerStartWaypoint(int playerId, Vec3D position, BaseContext context)
     {
-        if (playerId < 1 || playerId > 6)
+        if (playerId < 0 || playerId > 6)
         {
             throw new System.Exception("Player ID must be between 1 and 6.");
         }
@@ -93,43 +69,7 @@ public class ObjectsListAsset: BaseAsset
     public ObjectAsset AddObj(BaseContext context, string typeName, Vec3D position, float angle = 0,
         string belongToTeam = "PlyrNeutral/teamPlyrNeutral", string objName = "")
     {
-        var (id, uniqueId) = GetNextUniqueId(typeName);
-
-        var asset = ObjectAsset.OfObj(uniqueId, typeName, position, angle, objName, belongToTeam, context);
-        MapObjectList.Add(asset);
-        _uniqueIdSet.Add(uniqueId);
-        MarkModified();
-
-        maxObjectId = id;
-        return asset;
-    }
-
-    public ObjectAsset AddRoad(BaseContext context, string typeName, Vec3D position,
-        RoadOptions options, float angle = 0,
-        string belongToTeam = "PlyrNeutral/teamPlyrNeutral")
-    {
-        if (!options.IsRoad)
-        {
-            throw new ArgumentOutOfRangeException(nameof(options), "A road node must have a non-zero option value.");
-        }
-
-        var (id, uniqueId) = GetNextUniqueId(typeName);
-        var asset = ObjectAsset.OfRoad(uniqueId, typeName, position, angle, options, belongToTeam, context);
-        MapObjectList.Add(asset);
-        _uniqueIdSet.Add(uniqueId);
-        MarkModified();
-
-        maxObjectId = id;
-        return asset;
-    }
-
-    private (int id, string uniqueId) GetNextUniqueId(string typeName)
-    {
-        if (string.IsNullOrWhiteSpace(typeName))
-        {
-            throw new ArgumentException("A non-empty object type name is required.", nameof(typeName));
-        }
-        var id = maxObjectId + 1;
+        int id = maxObjectId + 1;
         var uniqueId = typeName + " " + id;
 
         while (_uniqueIdSet.Contains(uniqueId))
@@ -137,15 +77,20 @@ public class ObjectsListAsset: BaseAsset
             id++;
             uniqueId = typeName + " " + id;
         }
+        
+        var asset = ObjectAsset.OfObj(uniqueId, typeName, position, angle, objName, belongToTeam, context);
+        MapObjectList.Add(asset);
+        MarkModified();
 
-        return (id, uniqueId);
+        maxObjectId = id;
+        return asset;
     }
     
     public void Remove(ObjectAsset asset)
     {
         if (asset.IsWaypoint)
         {
-            _waypointNameSet.Remove(asset.Properties.GetProperty<string>("waypointName"));
+            _waypointNameSet.Remove(asset.UniqueId);
         }
         else
         {
@@ -159,18 +104,17 @@ public class ObjectsListAsset: BaseAsset
     {
         if (asset.IsWaypoint)
         {
-            var waypointName = asset.Properties.GetProperty<string>("waypointName");
             if (autoId)
             {
                 maxWaypointId++;
                 asset.Properties.SetProperty("waypointID", maxWaypointId);
             }
 
-            if (_waypointNameSet.Contains(waypointName))
+            if (_waypointNameSet.Contains(asset.UniqueId))
             {
-                throw new System.Exception($"Waypoint name '{waypointName}' already exists.");
+                throw new System.Exception($"Waypoint name '{asset.UniqueId}' already exists.");
             }
-            _waypointNameSet.Add(waypointName);
+            _waypointNameSet.Add(asset.UniqueId);
             maxWaypointId = Math.Max(maxWaypointId, asset.Properties.GetProperty<int>("waypointID"));
             MapObjectList.Add(asset);
         }
@@ -213,20 +157,16 @@ public class ObjectsListAsset: BaseAsset
         while (binaryReader.BaseStream.Position < DataSize)
         {
             var mapObject = (ObjectAsset)AssetParser.FromBinaryReader(binaryReader, context);
+            _uniqueIdSet.Add(mapObject.UniqueId);
             if (mapObject.IsWaypoint)
             {
                 var waypointId = mapObject.Properties.GetProperty<int>("waypointID");
                 maxWaypointId = Math.Max(maxWaypointId, waypointId);
-                _waypointNameSet.Add(mapObject.Properties.GetProperty<string>("waypointName"));
-            }
-            else
-            {
-                _uniqueIdSet.Add(mapObject.UniqueId);
             }
             MapObjectList.Add(mapObject, ignoreModified: true);
         }
 
-        maxObjectId = MapObjectList.Count - 1;
+        maxObjectId = MapObjectList.Count;
         
         ObservableUtil.Subscribe(MapObjectList, this);
         

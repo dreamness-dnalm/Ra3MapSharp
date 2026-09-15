@@ -2,13 +2,9 @@ using Dreamness.Ra3.Map.Parser.Asset.Base;
 using Dreamness.Ra3.Map.Parser.Core.Base;
 using Dreamness.Ra3.Map.Parser.Util;
 
-// The legacy namespace is retained to avoid breaking existing consumers.
 namespace Dreamness.Ra3.Map.Parser.Asset.SubAsset.Impl.Unknown;
 
-/// <summary>
-/// WorldBuilder multiplayer-slot policy. Spatial spawn coordinates are stored
-/// by player-start waypoints, not by this asset.
-/// </summary>
+// TODO: ????
 public class MPPositionInfo: BaseAsset
 {
     private bool isHuman;
@@ -71,16 +67,15 @@ public class MPPositionInfo: BaseAsset
         }
     }
 
-    private string[] sideRestrictions = Array.Empty<string>();
+    private string[] sideRestrictions;
     public string[] SideRestrictions
     {
-        get => sideRestrictions.ToArray();
+        get => sideRestrictions;
         set
         {
-            ArgumentNullException.ThrowIfNull(value);
-            if (!sideRestrictions.SequenceEqual(value))
+            if (sideRestrictions != value)
             {
-                sideRestrictions = value.ToArray();
+                sideRestrictions = value;
                 MarkModified();
             }
         }
@@ -88,7 +83,7 @@ public class MPPositionInfo: BaseAsset
     
     public override short GetVersion()
     {
-        return 1;
+        return 0;
     }
 
     public override string GetAssetType()
@@ -113,36 +108,46 @@ public class MPPositionInfo: BaseAsset
     
     public static MPPositionInfo FromBinaryReader(BinaryReader binaryReader, BaseContext context)
     {
-        return Dreamness.Ra3.Map.Parser.Asset.Util.AssetParser.FromBinaryReader(binaryReader, context) as MPPositionInfo
-               ?? throw new InvalidDataException("Expected MPPositionInfo asset.");
+        using var memoryStream = new MemoryStream();
+        using var binaryWriter = new BinaryWriter(memoryStream);
+
+        var mPositionInfo = new MPPositionInfo();
+        
+        var isHuman = binaryReader.ReadBoolean();
+        binaryWriter.Write(isHuman);
+        mPositionInfo.IsHuman = isHuman;
+        
+        var isComputer = binaryReader.ReadBoolean();
+        binaryWriter.Write(isComputer);
+        mPositionInfo.IsComputer = isComputer;
+        
+        var loadAIScript = binaryReader.ReadBoolean();
+        binaryWriter.Write(loadAIScript);
+        mPositionInfo.LoadAIScript = loadAIScript;
+        
+        var team = binaryReader.ReadUInt32();
+        binaryWriter.Write(team);
+        mPositionInfo.Team = team;
+        
+        var sideRestrictionCount = binaryReader.ReadInt32();
+        binaryWriter.Write(sideRestrictionCount);
+        var sideRestrictions = new string[sideRestrictionCount];
+        for (var i = 0; i < sideRestrictionCount; i++)
+        {
+            var restriction = binaryReader.ReadDefaultString();
+            binaryWriter.WriteDefaultString(restriction);
+            sideRestrictions[i] = restriction;
+        }
+        
+        binaryWriter.Flush();
+        mPositionInfo.Data = memoryStream.ToArray();
+        
+        return mPositionInfo;
     }
 
     protected override void _Parse(BaseContext context)
     {
-        using var memoryStream = new MemoryStream(Data);
-        using var binaryReader = new BinaryReader(memoryStream);
-
-        isHuman = binaryReader.ReadBoolean();
-        isComputer = binaryReader.ReadBoolean();
-        loadAIScript = binaryReader.ReadBoolean();
-        team = binaryReader.ReadUInt32();
-
-        var sideRestrictionCount = binaryReader.ReadInt32();
-        if (sideRestrictionCount < 0 || sideRestrictionCount > 1024)
-        {
-            throw new InvalidDataException($"Invalid side restriction count: {sideRestrictionCount}.");
-        }
-
-        sideRestrictions = new string[sideRestrictionCount];
-        for (var i = 0; i < sideRestrictionCount; i++)
-        {
-            sideRestrictions[i] = binaryReader.ReadDefaultString();
-        }
-
-        if (binaryReader.BaseStream.Position != binaryReader.BaseStream.Length)
-        {
-            throw new InvalidDataException("MPPositionInfo contains trailing data.");
-        }
+        throw new NotImplementedException();
     }
 
     protected override byte[] Deparse(BaseContext context)

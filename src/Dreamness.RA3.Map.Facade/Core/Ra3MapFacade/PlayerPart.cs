@@ -47,7 +47,8 @@ public partial class Ra3MapFacade
     public PlayerData AddPlayer(string playerName)
     {
         var playerData = PlayerData.Of(playerName, ra3Map.Context);
-        ra3Map.Context.AddSide(playerData);
+        _sideListAsset.PlayerDataList.Add(playerData);
+        _sideListAsset.MarkModified();
         return playerData;
     }
     
@@ -58,7 +59,8 @@ public partial class Ra3MapFacade
     /// <returns></returns>
     public PlayerData AddPlayer(PlayerData playerData)
     {
-        ra3Map.Context.AddSide(playerData);
+        _sideListAsset.PlayerDataList.Add(playerData);
+        _sideListAsset.MarkModified();
         return playerData;
     }
 

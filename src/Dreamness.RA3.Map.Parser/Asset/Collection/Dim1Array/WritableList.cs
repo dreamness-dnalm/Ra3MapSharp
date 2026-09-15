@@ -49,9 +49,9 @@ public class WritableList<T>: Ra3MapWritable, IEnumerable<T> where T:Ra3MapWrita
         MarkModified();
     }
     
-    public IReadOnlyList<T> GetAssets()
+    public List<T> GetAssets()
     {
-        return _assets.AsReadOnly();
+        return _assets;
     }
     
     public int Count { get => _assets.Count; }
