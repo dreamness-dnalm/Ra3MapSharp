@@ -27,9 +27,17 @@ public class PostEffectsChunkAsset: BaseAsset
         using var binaryReader = new BinaryReader(memoryStream);
         
         int effectCount = binaryReader.ReadInt32();
+        if (effectCount < 0 || effectCount > 100_000)
+        {
+            throw new InvalidDataException($"Invalid post-effect count: {effectCount}.");
+        }
         for (int i = 0; i < effectCount; i++)
         {
             PostEffects.Add(PostEffect.FromBinaryReader(binaryReader, context), ignoreModified:true);
+        }
+        if (binaryReader.BaseStream.Position != binaryReader.BaseStream.Length)
+        {
+            throw new InvalidDataException("PostEffectsChunk contains trailing data.");
         }
         ObservableUtil.Subscribe(PostEffects, this);
     }

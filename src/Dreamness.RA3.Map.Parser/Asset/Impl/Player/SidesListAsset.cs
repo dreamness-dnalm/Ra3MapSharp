@@ -4,7 +4,6 @@ using Dreamness.Ra3.Map.Parser.Asset.Collection;
 using Dreamness.Ra3.Map.Parser.Asset.Collection.Dim1Array;
 using Dreamness.Ra3.Map.Parser.Core.Base;
 using Dreamness.Ra3.Map.Parser.Util;
-using Dreamness.Ra3.Map.Parser.Util;
 
 namespace Dreamness.Ra3.Map.Parser.Asset.Impl.Player;
 
@@ -20,15 +19,23 @@ public class SidesListAsset: BaseAsset
         using var memoryStream = new MemoryStream(Data);
         using var binaryReader = new BinaryReader(memoryStream);
         magic = binaryReader.ReadByte(); // must be 1
-        // if (mustbeOne != 1)
-        // {
-        //     throw new InvalidDataException("Invalid SidesList data, expected first byte to be 1.");
-        // }
+        if (magic != 1)
+        {
+            throw new InvalidDataException($"Invalid SidesList marker: {magic}; expected 1.");
+        }
         var playerCount = binaryReader.ReadInt32();
+        if (playerCount < 0 || playerCount > 10_000)
+        {
+            throw new InvalidDataException($"Invalid player count: {playerCount}.");
+        }
         for (int i = 0; i < playerCount; i++)
         {
             var playerData = PlayerData.FromBinaryReader(binaryReader, context);
             PlayerDataList.Add(playerData, ignoreModified:true);
+        }
+        if (binaryReader.BaseStream.Position != binaryReader.BaseStream.Length)
+        {
+            throw new InvalidDataException("SidesList contains trailing data.");
         }
         
         ObservableUtil.Subscribe(PlayerDataList, this);

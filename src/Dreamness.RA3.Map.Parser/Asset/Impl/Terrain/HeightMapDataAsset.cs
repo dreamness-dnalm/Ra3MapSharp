@@ -27,7 +27,7 @@ public class HeightMapDataAsset: BaseAsset
     
     public WritableList<BorderData> Borders { get; private set; } = new WritableList<BorderData>();
 
-    public int Area => MapWidth * MapHeight;
+    public int Area => checked(MapWidth * MapHeight);
     
     public ElevationDim2Array Elevations { get; set; }
     
@@ -50,8 +50,22 @@ public class HeightMapDataAsset: BaseAsset
         MapWidth = binaryReader.ReadInt32();
         MapHeight = binaryReader.ReadInt32();
         BorderWidth = binaryReader.ReadInt32();
+        if (MapWidth <= 0 || MapHeight <= 0 || MapWidth > 16_384 || MapHeight > 16_384 ||
+            (long)MapWidth * MapHeight > 64_000_000)
+        {
+            throw new InvalidDataException($"Invalid map dimensions: {MapWidth} x {MapHeight}.");
+        }
+
+        if (BorderWidth < 0 || BorderWidth * 2 >= MapWidth || BorderWidth * 2 >= MapHeight)
+        {
+            throw new InvalidDataException($"Invalid map border width: {BorderWidth}.");
+        }
             
         int borderCount = binaryReader.ReadInt32();
+        if (borderCount < 0 || borderCount > 100_000)
+        {
+            throw new InvalidDataException($"Invalid border count: {borderCount}.");
+        }
         
         for (int i = 0; i < borderCount; i++)
         {
@@ -65,6 +79,10 @@ public class HeightMapDataAsset: BaseAsset
         }
         ObservableUtil.Subscribe(Borders, this);
         var _area = binaryReader.ReadInt32();
+        if (_area != Area)
+        {
+            throw new InvalidDataException($"HeightMapData area mismatch: declared {_area}, expected {Area}.");
+        }
             
         var elevations = new float[MapWidth, MapHeight];
         for (int y = 0; y < MapHeight; y++)
@@ -77,6 +95,10 @@ public class HeightMapDataAsset: BaseAsset
         }
         Elevations = new ElevationDim2Array(elevations);
         ObservableUtil.Subscribe(Elevations, this);
+        if (binaryReader.BaseStream.Position != binaryReader.BaseStream.Length)
+        {
+            throw new InvalidDataException("HeightMapData contains trailing data.");
+        }
     }
 
     protected override byte[] Deparse(BaseContext context)
@@ -108,6 +130,18 @@ public class HeightMapDataAsset: BaseAsset
 
     public static HeightMapDataAsset Default(int mapPlayableWidth, int mapPlayableHeight, int borderWidth, BaseContext context)
     {
+        if (mapPlayableWidth <= 0 || mapPlayableHeight <= 0 || borderWidth < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(mapPlayableWidth), "Map dimensions must be positive and border width non-negative.");
+        }
+
+        var totalWidth = checked(mapPlayableWidth + 2 * borderWidth);
+        var totalHeight = checked(mapPlayableHeight + 2 * borderWidth);
+        if (totalWidth > 16_384 || totalHeight > 16_384 || (long)totalWidth * totalHeight > 64_000_000)
+        {
+            throw new ArgumentOutOfRangeException(nameof(mapPlayableWidth), "Requested map dimensions exceed parser limits.");
+        }
+
         var heightMapDataAsset = new HeightMapDataAsset();
         
         heightMapDataAsset.ApplyBasicInfo(context);

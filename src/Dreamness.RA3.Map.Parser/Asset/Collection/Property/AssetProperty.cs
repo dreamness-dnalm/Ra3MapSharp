@@ -124,7 +124,11 @@ public class AssetProperty: Ra3MapWritable
                     binaryWriter.WriteUnicodeString((string)Value);
                     break;
                 case AssetPropertyType.stringNameValueType:
-                    binaryWriter.WriteDefaultString((string)Value);
+                    if (Value is not string nameValue)
+                    {
+                        throw new InvalidDataException("stringNameValueType requires a single string value.");
+                    }
+                    binaryWriter.WriteDefaultString(nameValue);
                     break;
                 default:
                     throw new System.Exception("unknown type:" + propertyType);
@@ -163,6 +167,11 @@ public class AssetProperty: Ra3MapWritable
         {
             assetProperty.propertyType = AssetPropertyType.intType;
         }
+        else if (data is Enum)
+        {
+            assetProperty._value = Convert.ToInt32(data);
+            assetProperty.propertyType = AssetPropertyType.intType;
+        }
         else if (data is float)
         {
             assetProperty.propertyType = AssetPropertyType.floatType;
@@ -180,11 +189,13 @@ public class AssetProperty: Ra3MapWritable
         }
         else if (data is string[])
         {
-            assetProperty.propertyType = AssetPropertyType.stringNameValueType;
+            throw new ArgumentException(
+                "RA3 asset properties do not have a string-array wire type. Use a single encoded string or separate properties.",
+                nameof(data));
         }
         else
         {
-            assetProperty.propertyType = AssetPropertyType.intType;
+            throw new ArgumentException($"Unsupported asset property value type: {data?.GetType().FullName ?? "null"}.", nameof(data));
         }
 
         assetProperty.Id = context.RegisterStringDeclare(name);

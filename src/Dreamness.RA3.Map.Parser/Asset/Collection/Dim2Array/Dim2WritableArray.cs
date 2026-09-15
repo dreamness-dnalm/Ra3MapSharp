@@ -31,7 +31,9 @@ public abstract class Dim2WritableArray<T> : Ra3MapWritable
         }
     }
     
-    public T[,] Array => _array;
+    public T[,] Array => (T[,])_array.Clone();
+
+    internal T[,] BackingArray => _array;
 
     public int Width => _array.GetLength(0);
     public int Height => _array.GetLength(1);

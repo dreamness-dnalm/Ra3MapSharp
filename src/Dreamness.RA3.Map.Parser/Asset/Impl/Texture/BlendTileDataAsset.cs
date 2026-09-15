@@ -14,17 +14,19 @@ public class BlendTileDataAsset: BaseAsset
     
     private int mapHeight;
 
-    public UshortDim2Array Tiles;
+    public UshortDim2Array Tiles { get; private set; } = null!;
     
-    public UshortDim2Array Blends;
+    public UshortDim2Array Blends { get; private set; } = null!;
     
-    public WritableList<BlendInfo> BlendInfos = new WritableList<BlendInfo>();
+    public WritableList<BlendInfo> BlendInfos { get; } = new();
 
-    public UshortDim2Array SingleEdgeBlends;
-    
-    public PassabilityDim2Array Passabilities;
+    public WritableList<BlendInfo> CliffBlendInfos { get; } = new();
 
-    public UshortDim2Array CliffBlends;
+    public UshortDim2Array SingleEdgeBlends { get; private set; } = null!;
+    
+    public PassabilityDim2Array Passabilities { get; private set; } = null!;
+
+    public UshortDim2Array CliffBlends { get; private set; } = null!;
 
     public int cliffBlendsCount;
     
@@ -43,27 +45,31 @@ public class BlendTileDataAsset: BaseAsset
 
     private int TextureCellCount;
 
-    public BoolDim2Array PassageWidths;
+    public BoolDim2Array PassageWidths { get; private set; } = null!;
     
-    public BoolDim2Array Visibilities;
+    public BoolDim2Array Visibilities { get; private set; } = null!;
     
-    public BoolDim2Array Buildabilities;
+    public BoolDim2Array Buildabilities { get; private set; } = null!;
     
-    public BoolDim2Array TiberiumGrowabilities;
+    public BoolDim2Array TiberiumGrowabilities { get; private set; } = null!;
     
-    public ByteDim2Array DynamicShrubberies;
-    
-    
+    public ByteDim2Array DynamicShrubberies { get; private set; } = null!;
     
     
     
-    public WritableList<Texture> Textures = new WritableList<Texture>();
+    
+    
+    public WritableList<Texture> Textures { get; } = new();
     
     private Dictionary<string, int> textureIndexDict = new Dictionary<string, int>();
     
     private uint magic1 = 3452816845u;
 
     private int magic2 = 0;
+
+    private byte[] additionalBlendData = Array.Empty<byte>();
+
+    public ReadOnlyMemory<byte> AdditionalBlendData => additionalBlendData;
     
     public override short GetVersion()
     {
@@ -77,7 +83,8 @@ public class BlendTileDataAsset: BaseAsset
 
     protected override void _Parse(BaseContext context)
     {
-        var heightMapDataAsset = context.AssetDict[AssetNameConst.HeightMapData] as HeightMapDataAsset;
+        var heightMapDataAsset = context.AssetDict[AssetNameConst.HeightMapData] as HeightMapDataAsset
+            ?? throw new InvalidDataException("BlendTileData requires a parsed HeightMapData asset.");
         mapWidth = heightMapDataAsset.MapWidth;
         mapHeight = heightMapDataAsset.MapHeight;
         
@@ -85,6 +92,10 @@ public class BlendTileDataAsset: BaseAsset
         using var binaryReader = new BinaryReader(memoryStream);
 
         int area = binaryReader.ReadInt32();
+        if (area != checked(mapWidth * mapHeight))
+        {
+            throw new InvalidDataException($"BlendTileData area mismatch: declared {area}, expected {mapWidth * mapHeight}.");
+        }
         Tiles = new UshortDim2Array(IOUtility.ReadArray<ushort>(binaryReader, mapWidth, mapHeight));
         Blends = new UshortDim2Array(IOUtility.ReadArray<ushort>(binaryReader, mapWidth, mapHeight));
         SingleEdgeBlends = new UshortDim2Array(IOUtility.ReadArray<ushort>(binaryReader, mapWidth, mapHeight));
@@ -92,8 +103,8 @@ public class BlendTileDataAsset: BaseAsset
         Passabilities = new PassabilityDim2Array(new Passability[mapWidth, mapHeight]);
         var impassable = IOUtility.ReadArray<bool>(binaryReader, mapWidth, mapHeight);
         bool[,] impassableToPlayers = IOUtility.ReadArray<bool>(binaryReader, mapWidth, mapHeight);
-        PassageWidths = new BoolDim2Array(IOUtility.ReadArray<bool>(binaryReader, mapWidth, mapHeight));
         bool[,] extraPassable = IOUtility.ReadArray<bool>(binaryReader, mapWidth, mapHeight);
+        PassageWidths = new BoolDim2Array(IOUtility.ReadArray<bool>(binaryReader, mapWidth, mapHeight));
         Visibilities = new BoolDim2Array(IOUtility.ReadArray<bool>(binaryReader, mapWidth, mapHeight));
         Buildabilities = new BoolDim2Array(IOUtility.ReadArray<bool>(binaryReader, mapWidth, mapHeight));
         bool[,] impassableToAirUnits = IOUtility.ReadArray<bool>(binaryReader, mapWidth, mapHeight);
@@ -132,31 +143,46 @@ public class BlendTileDataAsset: BaseAsset
         var blendsCount = binaryReader.ReadInt32() - 1;
         cliffBlendsCount = binaryReader.ReadInt32() - 1;
         int textureCount = binaryReader.ReadInt32();
+        if (TextureCellCount < 0 || blendsCount < 0 || cliffBlendsCount < -1 ||
+            textureCount < 0 || textureCount > 100_000 || blendsCount > 1_000_000)
+        {
+            throw new InvalidDataException(
+                $"Invalid BlendTileData counts: cells={TextureCellCount}, blends={blendsCount}, cliffs={cliffBlendsCount}, textures={textureCount}.");
+        }
         // textures = new Texture[br.ReadInt32()];
         for (int j = 0; j < textureCount; j++)
         {
             var texture = Texture.FromBinaryReader(binaryReader, context);
             // AddTexture(context, texture);
-            Textures.Add(texture);
+            Textures.Add(texture, ignoreModified: true);
             textureIndexDict.Add(texture.Name, Textures.Count - 1);
         }
         magic1 = binaryReader.ReadUInt32();
-        // if (magic1 != this.magic1)
-        // {
-        //     throw new System.Exception("BlendTileDataAsset magic1 mismatch: " + magic1 + " != " + this.magic1);
-        // }
         magic2 = binaryReader.ReadInt32();
-        // if (magic2 != this.magic2)
-        // {
-        //     throw new System.Exception("BlendTileDataAsset magic2 mismatch: " + magic2 + " != " + this.magic2);
-        // }
         
         for (int i = 0; i < blendsCount; i++)
         {
-            BlendInfos.Add(BlendInfo.FromBinaryReader(binaryReader, context));
+            BlendInfos.Add(BlendInfo.FromBinaryReader(binaryReader, context), ignoreModified: true);
+        }
+        for (var i = 0; i < cliffBlendsCount; i++)
+        {
+            CliffBlendInfos.Add(BlendInfo.FromBinaryReader(binaryReader, context), ignoreModified: true);
+        }
+        if (binaryReader.BaseStream.Position != binaryReader.BaseStream.Length)
+        {
+            var remaining = binaryReader.BaseStream.Length - binaryReader.BaseStream.Position;
+            if (remaining > int.MaxValue || remaining % 18 != 0)
+            {
+                throw new InvalidDataException(
+                    $"BlendTileData contains an invalid {remaining}-byte additional blend block.");
+            }
+
+            additionalBlendData = binaryReader.ReadBytesExactly((int)remaining, "additional blend data");
         }
         
         ObservableUtil.Subscribe(BlendInfos, this);
+        ObservableUtil.Subscribe(CliffBlendInfos, this);
+        ObservableUtil.Subscribe(Textures, this);
         ObservableUtil.Subscribe(Tiles, this);
         ObservableUtil.Subscribe(Blends, this);
         ObservableUtil.Subscribe(SingleEdgeBlends, this);
@@ -166,6 +192,7 @@ public class BlendTileDataAsset: BaseAsset
         ObservableUtil.Subscribe(Visibilities, this);
         ObservableUtil.Subscribe(Buildabilities, this);
         ObservableUtil.Subscribe(TiberiumGrowabilities, this);
+        ObservableUtil.Subscribe(DynamicShrubberies, this);
         
         
     }
@@ -176,11 +203,11 @@ public class BlendTileDataAsset: BaseAsset
         using var binaryWriter = new BinaryWriter(memoryStream);
         
         binaryWriter.Write(mapWidth * mapHeight);
-        IOUtility.WriteArray(binaryWriter, Tiles.Array);
-        IOUtility.WriteArray(binaryWriter, Blends.Array);
-        IOUtility.WriteArray(binaryWriter, SingleEdgeBlends.Array);
+        IOUtility.WriteArray(binaryWriter, Tiles.BackingArray);
+        IOUtility.WriteArray(binaryWriter, Blends.BackingArray);
+        IOUtility.WriteArray(binaryWriter, SingleEdgeBlends.BackingArray);
         // binaryWriter.Write(new byte[mapWidth * mapHeight * 2]);
-        IOUtility.WriteArray(binaryWriter, CliffBlends.Array);
+        IOUtility.WriteArray(binaryWriter, CliffBlends.BackingArray);
         bool[,] impassable = new bool[mapWidth, mapHeight];
         bool[,] impassableToPlayers = new bool[mapWidth, mapHeight];
         bool[,] impassableToAirUnits = new bool[mapWidth, mapHeight];
@@ -209,16 +236,17 @@ public class BlendTileDataAsset: BaseAsset
         IOUtility.WriteArray(binaryWriter, impassable);
         IOUtility.WriteArray(binaryWriter, impassableToPlayers);
         IOUtility.WriteArray(binaryWriter, extraPassable);
-        IOUtility.WriteArray(binaryWriter, PassageWidths.Array);
-        IOUtility.WriteArray(binaryWriter, Visibilities.Array);
-        IOUtility.WriteArray(binaryWriter, Buildabilities.Array);
+        IOUtility.WriteArray(binaryWriter, PassageWidths.BackingArray);
+        IOUtility.WriteArray(binaryWriter, Visibilities.BackingArray);
+        IOUtility.WriteArray(binaryWriter, Buildabilities.BackingArray);
         IOUtility.WriteArray(binaryWriter, impassableToAirUnits);
-        IOUtility.WriteArray(binaryWriter, TiberiumGrowabilities.Array);
-        IOUtility.WriteArray(binaryWriter, DynamicShrubberies.Array);
+        IOUtility.WriteArray(binaryWriter, TiberiumGrowabilities.BackingArray);
+        IOUtility.WriteArray(binaryWriter, DynamicShrubberies.BackingArray);
         binaryWriter.Write(TextureCellCount);
         // binaryWriter.Write(blendsCount + 1);
         binaryWriter.Write(BlendInfos.Count + 1);
-        binaryWriter.Write(CliffBlendsCount + 1);
+        var serializedCliffBlendCount = CliffBlendInfos._modified ? CliffBlendInfos.Count : CliffBlendsCount;
+        binaryWriter.Write(serializedCliffBlendCount + 1);
         binaryWriter.Write(Textures.Count);
         binaryWriter.Write(Textures.ToBytes(context));
         // foreach (Texture t in textures)
@@ -230,6 +258,8 @@ public class BlendTileDataAsset: BaseAsset
         binaryWriter.Write(magic2);
         
         binaryWriter.Write(BlendInfos.ToBytes(context));
+        binaryWriter.Write(CliffBlendInfos.ToBytes(context));
+        binaryWriter.Write(additionalBlendData);
         
         // for (int i = 0; i < blendsCount; i++)
         // {
@@ -324,7 +354,8 @@ public class BlendTileDataAsset: BaseAsset
         textureIndexDict.Add(texture.Name, Textures.Count - 1);
         
         TextureCellCount += texture.CellCount;
-        var worldInfo = context.AssetDict[AssetNameConst.WorldInfo] as WorldInfoAsset;
+        var worldInfo = context.AssetDict[AssetNameConst.WorldInfo] as WorldInfoAsset
+            ?? throw new InvalidOperationException("Adding a texture requires a parsed WorldInfo asset.");
         
         var terrainTextureStrings = worldInfo.Properties.GetProperty<string>("terrainTextureStrings");
         if (terrainTextureStrings == null)
@@ -373,8 +404,10 @@ public class BlendTileDataAsset: BaseAsset
     
     public void UpdatePassabilityMap(BaseContext context)
     {
-        var elev = (context.AssetDict[AssetNameConst.HeightMapData] as HeightMapDataAsset).Elevations;
-        double a = 45;
+        var heightMap = context.AssetDict[AssetNameConst.HeightMapData] as HeightMapDataAsset
+            ?? throw new InvalidOperationException("Updating passability requires a parsed HeightMapData asset.");
+        var elev = heightMap.Elevations;
+        double a = Math.PI / 4;
         float tan = (float)Math.Tan(a);
         // impassiableCount = 0;
         for (int y = 0; y < mapHeight; y++)
@@ -659,7 +692,10 @@ public class BlendTileDataAsset: BaseAsset
         else
         {
             // No different neighbors - remove any existing blend
-            // RemoveBlend(x, y);
+            if (Blends[x, y] != 0)
+            {
+                RemoveBlend(x, y);
+            }
             return;
         }
 
@@ -667,6 +703,12 @@ public class BlendTileDataAsset: BaseAsset
         if (textureCurrent <= secondaryTexture)
         {
             AddBlend(x, y, secondaryTexture, blendDirection);
+        }
+        else if (Blends[x, y] != 0)
+        {
+            // This cell is now the higher-priority side of the boundary. Any
+            // blend left over from an earlier texture layout is stale.
+            RemoveBlend(x, y);
         }
     }
 

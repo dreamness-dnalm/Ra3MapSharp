@@ -12,6 +12,7 @@ public static class AssetNameConst
     public const string MPPositionInfo = "MPPositionInfo";
     public const string SidesList = "SidesList";
     public const string LibraryMapLists = "LibraryMapLists";
+    public const string LibraryMaps = "LibraryMaps";
     public const string Teams = "Teams";
     public const string PlayerScriptsList = "PlayerScriptsList";
     public const string ScriptList = "ScriptList";

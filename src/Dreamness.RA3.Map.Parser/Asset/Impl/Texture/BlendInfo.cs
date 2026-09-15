@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using Dreamness.Ra3.Map.Parser.Asset.Base;
 using Dreamness.Ra3.Map.Parser.Core.Base;
+using Dreamness.Ra3.Map.Parser.Util;
 
 
 namespace Dreamness.Ra3.Map.Parser.Asset.Impl.Texture;
@@ -71,10 +72,10 @@ public class BlendInfo: Ra3MapWritable
     
     private BlendInfo(int secondaryTextureTile, uint i3, uint i4, BlendDirectionEnum blendDirection)
     {
-        SecondaryTextureTile = secondaryTextureTile;
-        I3 = i3;
-        I4 = i4;
-        BlendDirection = blendDirection;
+        this.secondaryTextureTile = secondaryTextureTile;
+        this.i3 = i3;
+        this.i4 = i4;
+        this.blendDirection = blendDirection;
     }
     
     public static BlendInfo FromBinaryReader(BinaryReader binaryReader, BaseContext context)
@@ -85,7 +86,7 @@ public class BlendInfo: Ra3MapWritable
         var secondaryTextureTile = binaryReader.ReadInt32();
         binaryWriter.Write(secondaryTextureTile);
 
-        var originBlendDirection = binaryReader.ReadBytes(6);
+        var originBlendDirection = binaryReader.ReadBytesExactly(6, "blend direction");
         var blendDirection = ToBlendDirection(originBlendDirection);
         binaryWriter.Write(originBlendDirection);
 
@@ -112,7 +113,7 @@ public class BlendInfo: Ra3MapWritable
     public static BlendInfo Create(int secondaryTextureTile,
                                    BlendDirectionEnum direction,
                                    uint i3 = uint.MaxValue,
-                                   uint i4 = 2061107200U)
+                                   uint i4 = 0x7ACDCD00U)
     {
         var blendInfo = new BlendInfo(secondaryTextureTile, i3, i4, direction);
         blendInfo.MarkModified();

@@ -13,7 +13,7 @@ using Dreamness.Ra3.Map.Parser.Asset.Impl.Water;
 using Dreamness.Ra3.Map.Parser.Asset.Impl.World;
 using Dreamness.Ra3.Map.Parser.Asset.Util;
 using Dreamness.Ra3.Map.Parser.Exception;
-using Dreamness.Ra3.Map.Parser.Util.Compress;
+using Dreamness.Ra3.Map.Parser.Util;
 
 namespace Dreamness.Ra3.Map.Parser.Core.Map;
 
@@ -24,105 +24,46 @@ public class Ra3Map
 
     }
     
-    public string MapFilePath { get; private set; }
+    public string? MapFilePath { get; private set; }
 
     public MapContext Context = new MapContext();
 
     public static Ra3Map Open(string mapFilePath)
     {
         var map = new Ra3Map();
-        map.MapFilePath = mapFilePath;
-
-        // try
-        // {
-            var bytes = File.ReadAllBytes(mapFilePath);
-            using var memoryStream = new MemoryStream(bytes);
-            var binaryReader = new BinaryReader(memoryStream);
-
-            var compressFlag = binaryReader.ReadUInt32();
-
-            switch (compressFlag)
-            {
-                case CompressConst.UnCompressFlag:
-                    break;
-                case CompressConst.CompressFlag:
-                    binaryReader.BaseStream.Position = 8L;
-                    // var compressedData = binaryReader.ReadBytes((int)binaryReader.BaseStream.Length - 8);
-                    // var decompressBytes = Compress.DecompressData(compressedData);
-
-                    var binaryWriter = new BinaryWriter(new MemoryStream());
-                    RefpackComrpessor.Decompress(binaryReader, binaryWriter);
-                
-
-                    binaryReader.Close();
-                    memoryStream.Close();
-
-                    // memoryStream = new MemoryStream(binaryWriter.BaseStream);
-                    binaryReader = new BinaryReader(binaryWriter.BaseStream);
-                    binaryReader.BaseStream.Position = 4L;
-                    break;
-                default:
-                    throw new System.Exception("Invalid map file format");
-            }
-        
-            var sectionDeclareCount = binaryReader.ReadInt32();
-            for (int i = 0; i < sectionDeclareCount; i++)
-            {
-                var name = binaryReader.ReadString();
-                var id = binaryReader.ReadInt32();
-                map.Context.RegisterStringDeclare(id, name);
-            }
-
-            while (binaryReader.BaseStream.Position < binaryReader.BaseStream.Length)
-            {
-                var asset = AssetParser.FromBinaryReader(binaryReader, map.Context);
-                map.Context.RegisterAsset(asset);
-            }
-        
-            binaryReader.Close();
-            // memoryStream.Close();
-
-            return map;
-        // }catch (System.Exception ex)
-        // {
-        //     map._hasError = true;
-        //     throw new BadMapException();
-        // }
+        var fullPath = Path.GetFullPath(mapFilePath);
+        var bytes = File.ReadAllBytes(fullPath);
+        using var binaryReader = MapFileCodec.CreatePayloadReader(bytes);
+        MapFileCodec.ReadContext(binaryReader, map.Context);
+        map.MapFilePath = fullPath;
+        return map;
     }
     
     public void SaveAs(string mapFilePath, bool compress = true)
     {
-        var dirPath = Path.GetDirectoryName(mapFilePath);
-        if (!Directory.Exists(dirPath))
-        {
-            Directory.CreateDirectory(dirPath);
-        }
-        
-        using var memoryStream = new MemoryStream();
-        using var binaryWriter = new BinaryWriter(memoryStream);
-
-        byte[] data = Context.ToBytes();
-        binaryWriter.Write(CompressConst.UnCompressFlag);
-        binaryWriter.Write(data);
-        
-        using var fileStream = File.Create(mapFilePath);
-        
-        if(compress)
-        {
-            byte[] output;
-            memoryStream.GetBuffer().Skip(0).Take((int) memoryStream.Length).ToArray().RefPackCompress(out output);
-            fileStream.Write(output, 0, output.Length);
-        }
-        else
-        {
-            fileStream.Write(memoryStream.GetBuffer(), 0, (int)memoryStream.Length);
-        }
+        SynchronizeModifiedSideMetadata();
+        MapFilePath = MapFileCodec.AtomicWrite(mapFilePath, MapFileCodec.Encode(Context, compress));
     }
 
-    public async Task<bool> SaveAsAsync(string mapFilePath, bool compress = true)
+    public async Task<bool> SaveAsAsync(
+        string mapFilePath,
+        bool compress = true,
+        CancellationToken cancellationToken = default)
     {
-        SaveAs(mapFilePath, compress);
+        SynchronizeModifiedSideMetadata();
+        MapFilePath = await MapFileCodec.AtomicWriteAsync(
+            mapFilePath,
+            MapFileCodec.Encode(Context, compress),
+            cancellationToken).ConfigureAwait(false);
         return true;
+    }
+
+    private void SynchronizeModifiedSideMetadata()
+    {
+        if (Context.AssetDict.TryGetValue(AssetNameConst.SidesList, out var sides) && sides._modified)
+        {
+            Context.SynchronizeSideMetadata();
+        }
     }
     
     public void Save(bool compress = true)
@@ -135,10 +76,14 @@ public class Ra3Map
         SaveAs(MapFilePath, compress);
     }
 
-    public async Task<bool> SaveAsync(bool compress = true)
+    public Task<bool> SaveAsync(bool compress = true, CancellationToken cancellationToken = default)
     {
-        Save(compress);
-        return true;
+        if (MapFilePath is null)
+        {
+            throw new InvalidOperationException("MapFilePath is null; use SaveAsAsync for a new map.");
+        }
+
+        return SaveAsAsync(MapFilePath, compress, cancellationToken);
     }
 
     public static Ra3Map NewMap(int mapPlayableWidth, int mapPlayableHeight, int borderWidth=0, string defaultTexture="Dirt_Yucatan03")
@@ -147,7 +92,7 @@ public class Ra3Map
         
         var ra3Map = new Ra3Map();
         var context = ra3Map.Context;
-
+        var sidesList = SidesListAsset.Default(context);
 
         BaseAsset[] assets =
         {
@@ -157,13 +102,14 @@ public class Ra3Map
             BlendTileDataAsset.Default(mapPlayableWidth, mapPlayableHeight, borderWidth, defaultTexture, context),
             WorldInfoAsset.Default(defaultTexture, context),
             MPPositionListAsset.Default(context),
-            SidesListAsset.Default(context),
-            LibraryMapListsAsset.Default(context),
+            sidesList,
+            LibraryMapListsAsset.Default(sidesList, context),
             TeamsAsset.Default(context),
             PlayerScriptsList.Default(context),
+            BuildListsAsset.Default(sidesList, context),
             ObjectsListAsset.Default(context),
-            StandingWaterAreasAsset.Default(mapPlayableWidth, mapPlayableHeight, borderWidth, context),
             GlobalWaterSettingsAsset.Default(context),
+            StandingWaterAreasAsset.Default(mapPlayableWidth, mapPlayableHeight, borderWidth, context),
             PostEffectsChunkAsset.Default(context),
             GlobalLightingAsset.Default(context)
             
