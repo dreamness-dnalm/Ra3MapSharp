@@ -110,6 +110,11 @@ public abstract class SymmetryStrategy
                     waypointWrap.WaypointName += $"_clone_{i}";
                     waypointWrap.Properties.PutProperty("uniqueID", waypointWrap.WaypointName);
                 }
+                else if (wrap is RoadObjectWrap roadObjectWrap)
+                {
+                    // roadObjectWrap.Angle = GetUnitAngle(templateAreaIndex, i, roadObjectWrap.Angle);
+                    continue;
+                }
                 else if (wrap is UnitObjectWrap unitObjectWrap)
                 {
                     unitObjectWrap.Angle = GetUnitAngle(templateAreaIndex, i, unitObjectWrap.Angle);
