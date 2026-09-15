@@ -6,21 +6,7 @@ namespace Dreamness.Ra3.Map.Parser.Asset.Impl.PostEffect;
 
 public class PostEffectParameter: Ra3MapWritable
 {
-    private object value;
-
-    public object Value
-    {
-        get => value is float[] values ? values.ToArray() : value;
-        set
-        {
-            ArgumentNullException.ThrowIfNull(value);
-            if (!Equals(this.value, value))
-            {
-                this.value = value is float[] values ? values.ToArray() : value;
-                MarkModified();
-            }
-        }
-    }
+    public object Value { get; private set; }
     
     public string Name { get; private set; }
     
@@ -28,7 +14,7 @@ public class PostEffectParameter: Ra3MapWritable
 
     private PostEffectParameter(string name, string type, object value)
     {
-        this.value = value is float[] values ? values.ToArray() : value;
+        Value = value;
         Name = name;
         Type = type;
     }
@@ -49,7 +35,7 @@ public class PostEffectParameter: Ra3MapWritable
         binaryWriter.WriteDefaultString(name);
         var type = binaryReader.ReadDefaultString();
         binaryWriter.WriteDefaultString(type);
-        object value;
+        object value = null;
         
         switch (type)
         {
@@ -81,11 +67,10 @@ public class PostEffectParameter: Ra3MapWritable
                 throw new InvalidDataException("Unknown post-effect type: " + type);
         }
 
+        var postEffectParameter = new PostEffectParameter(name, type, value);
+        
         binaryWriter.Flush();
-        var postEffectParameter = new PostEffectParameter(name, type, value)
-        {
-            Data = memoryStream.ToArray()
-        };
+        postEffectParameter.Value = memoryStream.ToArray();
         
         return postEffectParameter;
     }
@@ -107,7 +92,7 @@ public class PostEffectParameter: Ra3MapWritable
                     binaryWriter.Write((float)Value);
                     break;
                 case "Float4":
-                    if (Value is float[] { Length: 4 } floatArray)
+                    if (Value is float[] floatArray)
                     {
                         for (var i = 0; i < 4; i++)
                         {
@@ -121,9 +106,6 @@ public class PostEffectParameter: Ra3MapWritable
                     break;
                 case "Texture":
                     binaryWriter.WriteDefaultString((string)Value);
-                    break;
-                case "Int":
-                    binaryWriter.Write((int)Value);
                     break;
                 default:
                     throw new InvalidDataException("Unknown post-effect type: " + Type);

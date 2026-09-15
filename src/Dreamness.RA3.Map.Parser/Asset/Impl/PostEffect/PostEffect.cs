@@ -8,27 +8,13 @@ namespace Dreamness.Ra3.Map.Parser.Asset.Impl.PostEffect;
 
 public class PostEffect: Ra3MapWritable
 {
-    private string name;
-
-    public string Name
-    {
-        get => name;
-        set
-        {
-            ArgumentNullException.ThrowIfNull(value);
-            if (name != value)
-            {
-                name = value;
-                MarkModified();
-            }
-        }
-    }
+    public string Name { get; private set; }
     
     public WritableList<PostEffectParameter> Parameters { get; private set; } = new WritableList<PostEffectParameter>();
     
     private PostEffect(string name, WritableList<PostEffectParameter> parameters)
     {
-        this.name = name;
+        Name = name;
         Parameters = parameters;
         
         ObservableUtil.Subscribe(Parameters, this);
@@ -71,26 +57,16 @@ public class PostEffect: Ra3MapWritable
     
     public static PostEffect FromBinaryReader(BinaryReader binaryReader, BaseContext context)
     {
-        var start = binaryReader.BaseStream.Position;
         var name = binaryReader.ReadDefaultString();
         var parameterCount = binaryReader.ReadInt32();
-        if (parameterCount < 0 || parameterCount > 100_000)
-        {
-            throw new InvalidDataException($"Invalid post-effect parameter count: {parameterCount}.");
-        }
         
         var parameters = new WritableList<PostEffectParameter>();
         for (var i = 0; i < parameterCount; i++)
         {
-            parameters.Add(PostEffectParameter.FromBinaryReader(binaryReader, context), ignoreModified: true);
+            parameters.Add(PostEffectParameter.FromBinaryReader(binaryReader, context));
         }
         
-        var effect = new PostEffect(name, parameters);
-        var end = binaryReader.BaseStream.Position;
-        binaryReader.BaseStream.Position = start;
-        effect.Data = binaryReader.ReadBytesExactly(checked((int)(end - start)), "post-effect payload");
-        binaryReader.BaseStream.Position = end;
-        return effect;
+        return new PostEffect(name, parameters);
     }
     
     

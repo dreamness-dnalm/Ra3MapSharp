@@ -15,10 +15,6 @@ public abstract class BaseAsset: Ra3MapWritable
     public bool Parsed { get; set; } = false;
     
     public bool Errored { get; set; } = false;
-
-    public virtual bool IsSupported => true;
-
-    public bool RawPreserved => !IsSupported;
     
     public System.Exception ErrorException { get; set; }
     
@@ -39,7 +35,7 @@ public abstract class BaseAsset: Ra3MapWritable
         using var binaryWriter = new BinaryWriter(memoryStream);
         
         binaryWriter.Write(Id);
-        binaryWriter.Write(_modified ? GetVersion() : Version);
+        binaryWriter.Write(Version);
         
         if (_modified)
         {

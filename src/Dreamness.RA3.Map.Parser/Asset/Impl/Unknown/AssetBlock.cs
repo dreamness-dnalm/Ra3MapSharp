@@ -2,14 +2,8 @@ using Dreamness.Ra3.Map.Parser.Asset.Base;
 using Dreamness.Ra3.Map.Parser.Core.Base;
 
 
-// The legacy namespace is retained to avoid breaking existing consumers.
 namespace Dreamness.Ra3.Map.Parser.Asset.Impl.Unknown;
 
-/// <summary>
-/// Reference to an external compiled game asset in the map dependency manifest.
-/// The identifiers are preserved as raw SAGE asset hashes until a type/name
-/// resolver is available.
-/// </summary>
 public class AssetBlock: Ra3MapWritable
 {
 
@@ -27,8 +21,6 @@ public class AssetBlock: Ra3MapWritable
     {
         get => instanceId;
     }
-
-    public override string ToString() => $"0x{TypeId:X8}:0x{InstanceId:X8}";
     
     private AssetBlock(){}
     

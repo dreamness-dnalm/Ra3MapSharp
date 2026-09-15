@@ -6,7 +6,7 @@ namespace Dreamness.Ra3.Map.Parser.Asset.Impl.Water;
 // TODO: ???
 public class GlobalWaterSettingsAsset: BaseAsset
 {
-    private bool reflection;
+    private bool reflection = true;
     
     public bool Reflection
     {
@@ -21,7 +21,7 @@ public class GlobalWaterSettingsAsset: BaseAsset
         }
     }
 
-    private float reflectionPlaneHeight;
+    private float reflectionPlaneHeight = 200;
     
     public float ReflectionPlaneHeight
     {
@@ -48,21 +48,7 @@ public class GlobalWaterSettingsAsset: BaseAsset
 
     protected override void _Parse(BaseContext context)
     {
-        if (Data.Length != 8)
-        {
-            throw new InvalidDataException($"GlobalWaterSettings must be 8 bytes, but found {Data.Length}.");
-        }
-
-        using var stream = new MemoryStream(Data);
-        using var reader = new BinaryReader(stream);
-        var reflectionValue = reader.ReadInt32();
-        if (reflectionValue is not 0 and not 1)
-        {
-            throw new InvalidDataException($"Invalid reflection flag: {reflectionValue}.");
-        }
-
-        reflection = reflectionValue == 1;
-        reflectionPlaneHeight = reader.ReadSingle();
+        // TODO: ???
     }
 
     protected override byte[] Deparse(BaseContext context)
@@ -82,8 +68,6 @@ public class GlobalWaterSettingsAsset: BaseAsset
         var asset = new GlobalWaterSettingsAsset();
         
         asset.ApplyBasicInfo(context);
-        asset.Reflection = true;
-        asset.ReflectionPlaneHeight = 200;
         asset.MarkModified();
         return asset;
     }

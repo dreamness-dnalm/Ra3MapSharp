@@ -3,72 +3,52 @@ using Dreamness.Ra3.Map.Parser.Asset.Collection;
 using Dreamness.Ra3.Map.Parser.Asset.Collection.Dim1Array;
 using Dreamness.Ra3.Map.Parser.Core.Base;
 using Dreamness.Ra3.Map.Parser.Util;
+using Dreamness.Ra3.Map.Parser.Util;
 
 namespace Dreamness.Ra3.Map.Parser.Asset.Impl.Water;
 
 public class StandingWaterArea: Ra3MapWritable
 {
-    private int id;
-    private string name = string.Empty;
-    private float uvScrollSpeed;
-    private bool additiveBlending;
-    private string bumpmapTexture = string.Empty;
-    private string skyTexture = string.Empty;
-    private int waterHeight;
-    private string fxShader = string.Empty;
-    private string depthColors = string.Empty;
-
-    public int Id { get => id; set => SetField(ref id, value); }
-
-    public string Name { get => name; set => SetString(ref name, value); }
-
-    public float UVScrollSpeed { get => uvScrollSpeed; set => SetField(ref uvScrollSpeed, value); }
-
-    public bool AdditiveBlending { get => additiveBlending; set => SetField(ref additiveBlending, value); }
-
-    public string BumpmapTexture { get => bumpmapTexture; set => SetString(ref bumpmapTexture, value); }
-
-    public string SkyTexture { get => skyTexture; set => SetString(ref skyTexture, value); }
+    public int Id { get; private set; }
+    
+    public string Name { get; private set; }
+    
+    public float UVScrollSpeed { get; private set; }
+    
+    public bool AdditiveBlending { get; private set; }
+    
+    public string BumpmapTexture { get; private set; }
+    
+    public string SkyTexture { get; private set; }
 
     public WritableList<Vec2D> Points { get; private set; } = new WritableList<Vec2D>();
     
-    public int WaterHeight { get => waterHeight; set => SetField(ref waterHeight, value); }
-
-    public string FxShader { get => fxShader; set => SetString(ref fxShader, value); }
-
-    public string DepthColors { get => depthColors; set => SetString(ref depthColors, value); }
+    public int WaterHeight { get; private set; }
+    
+    public string FxShader { get; private set; }
+    
+    public string DepthColors { get; private set; }
     
     private StandingWaterArea(int id, string name, float uvScrollSpeed, bool additiveBlending, 
         string bumpmapTexture, string skyTexture, WritableList<Vec2D> points, int waterHeight, 
         string fxShader, string depthColors)
     {
-        this.id = id;
-        this.name = name;
-        this.uvScrollSpeed = uvScrollSpeed;
-        this.additiveBlending = additiveBlending;
-        this.bumpmapTexture = bumpmapTexture;
-        this.skyTexture = skyTexture;
+        using var memoryStream = new MemoryStream();
+        using var binaryWriter = new BinaryWriter(memoryStream);
+        
+        
+        Id = id;
+        Name = name;
+        UVScrollSpeed = uvScrollSpeed;
+        AdditiveBlending = additiveBlending;
+        BumpmapTexture = bumpmapTexture;
+        SkyTexture = skyTexture;
         Points = points;
-        this.waterHeight = waterHeight;
-        this.fxShader = fxShader;
-        this.depthColors = depthColors;
+        WaterHeight = waterHeight;
+        FxShader = fxShader;
+        DepthColors = depthColors;
 
         ObservableUtil.Subscribe(Points, this);
-    }
-
-    private void SetField<T>(ref T field, T value)
-    {
-        if (!EqualityComparer<T>.Default.Equals(field, value))
-        {
-            field = value;
-            MarkModified();
-        }
-    }
-
-    private void SetString(ref string field, string value)
-    {
-        ArgumentNullException.ThrowIfNull(value);
-        SetField(ref field, value);
     }
     
     public static StandingWaterArea FromBinaryReader(BinaryReader binaryReader, BaseContext context)
@@ -81,10 +61,6 @@ public class StandingWaterArea: Ra3MapWritable
         var name = binaryReader.ReadDefaultString();
         binaryWriter.WriteDefaultString(name);
         var magic = binaryReader.ReadInt16();
-        if (magic != 0)
-        {
-            throw new InvalidDataException($"Invalid StandingWaterArea marker: {magic}.");
-        }
         binaryWriter.Write(magic);
         var uvScrollSpeed = binaryReader.ReadSingle();
         binaryWriter.Write(uvScrollSpeed);
@@ -97,15 +73,11 @@ public class StandingWaterArea: Ra3MapWritable
 
         // Read points
         var pointCount = binaryReader.ReadInt32();
-        if (pointCount < 0 || pointCount > 1_000_000)
-        {
-            throw new InvalidDataException($"Invalid standing-water point count: {pointCount}.");
-        }
         binaryWriter.Write(pointCount);
         var points = new WritableList<Vec2D>();
         for (int i = 0; i < pointCount; i++)
         {
-            points.Add(Vec2D.FromBinaryReader(binaryReader, context), ignoreModified: true);
+            points.Add(Vec2D.FromBinaryReader(binaryReader, context));
         }
         binaryWriter.Write(points.ToBytes(context));
 

@@ -10,22 +10,6 @@ public abstract class BaseContext
 
     public int RegisterStringDeclare(int id, string name)
     {
-        ArgumentNullException.ThrowIfNull(name);
-        if (id <= 0)
-        {
-            throw new InvalidDataException($"String declaration IDs must be positive, but found {id}.");
-        }
-
-        if (StringDict.TryGetValue(id, out var existingName) && existingName != name)
-        {
-            throw new InvalidDataException($"String declaration ID {id} is already assigned to '{existingName}'.");
-        }
-
-        if (StringRevertDict.TryGetValue(name, out var existingId) && existingId != id)
-        {
-            throw new InvalidDataException($"String declaration '{name}' is already assigned to ID {existingId}.");
-        }
-
         StringDict.Put(id, name);
         StringRevertDict.Put(name, id);
         return id;
@@ -33,13 +17,12 @@ public abstract class BaseContext
 
     public int RegisterStringDeclare(string name)
     {
-        ArgumentNullException.ThrowIfNull(name);
         if (StringRevertDict.ContainsKey(name))
         {
             return StringRevertDict[name];
         }
 
-        var id = StringDict.Count == 0 ? 1 : StringDict.Keys.Max() + 1;
+        var id = StringDict.Count == 0 ? 0 : StringDict.Keys.Max() + 1;
         return RegisterStringDeclare(id, name);
     }
     
@@ -52,7 +35,7 @@ public abstract class BaseContext
         }
         else
         {
-            throw new InvalidDataException($"String declaration ID {key} is not registered.");
+            throw new System.Exception($"String ({key}) not registered");
         }
     }
 
