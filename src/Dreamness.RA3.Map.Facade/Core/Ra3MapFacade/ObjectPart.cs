@@ -10,32 +10,13 @@ public partial class Ra3MapFacade
 {
     private ObjectsListAsset _objectsList { get; set; }
 
-    private List<ObjectWrap> GetAllObjects()
-    {
-        return _objectsList
-            .MapObjectList
-            .Select(o => ObjectWrap.Of(o))
-            .ToList();
-    }
-
     private ObjectAsset? GetObjectByUniqueId(string uniqueId)
     {
-        var objectAssets = GetAllObjects()
-            .Where(o => o.UniqueId == uniqueId)
-            .Select(o => o.Obj)
-            .ToList();
-        if (objectAssets.Count == 0)
-        {
-            return null;
-        }
-        else
-        {
-            return objectAssets[0];
-        }
+        return _objectsList.MapObjectList.FirstOrDefault(o => o.UniqueId == uniqueId);
     }
 
     /// <summary>
-    /// 移除指定 UniqueId 的物体/路径点
+    /// 移除指定 UniqueId 的物体/路径点/路径
     /// </summary>
     /// <param name="uniqueId"></param>
     public void RemoveByUniqueId(string uniqueId)
@@ -48,7 +29,7 @@ public partial class Ra3MapFacade
     }
 
     /// <summary>
-    /// 移除物体/路径点/玩家/队伍
+    /// 移除物体/路径点/路径/玩家/队伍
     /// </summary>
     /// <param name="o"></param>
     /// <exception cref="ArgumentNullException"></exception>
@@ -62,7 +43,8 @@ public partial class Ra3MapFacade
 
         if (o is ObjectWrap objectWrap)
         {
-            RemoveByUniqueId((o as ObjectWrap).UniqueId);
+            // 路径点名称和 uniqueID 都可能重复，必须按包装器持有的底层实例精确删除。
+            _objectsList.Remove(objectWrap.Obj);
         }
         else if (o is PlayerData playerData)
         {
@@ -90,14 +72,14 @@ public partial class Ra3MapFacade
     // ---------- objects ----------------
 
     /// <summary>
-    /// 获取所有单位物体
+    /// 获取所有单位物体（不含路径点和路径节点）
     /// </summary>
     /// <returns></returns>
     public List<UnitObjectWrap> GetUnitObjects()
     {
-        return GetAllObjects()
-            .Where(o => o is UnitObjectWrap)
-            .Select(o => o as UnitObjectWrap)
+        return _objectsList
+            .GetRegularObjects()
+            .Select(o => new UnitObjectWrap(o))
             .ToList();
     }
     
@@ -123,9 +105,9 @@ public partial class Ra3MapFacade
     /// <returns></returns>
     public List<WaypointWrap> GetWaypoints()
     {
-        return GetAllObjects()
-            .Where(o => o is WaypointWrap)
-            .Select(o => o as WaypointWrap)
+        return _objectsList
+            .GetWaypointObjects()
+            .Select(o => new WaypointWrap(o))
             .ToList();
     }
     

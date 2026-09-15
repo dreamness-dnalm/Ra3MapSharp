@@ -74,6 +74,18 @@ public class ObjectAsset: BaseAsset
     public AssetProperties Properties { get; private set; }
     
     public bool IsWaypoint => _typeName == "*Waypoints/Waypoint";
+
+    /// <summary>
+    /// 路径点类型。值直接映射到二进制对象属性 <c>waypointType</c>。
+    /// </summary>
+    public WaypointType WaypointType
+    {
+        get => (WaypointType)Properties.GetProperty<int>("waypointType");
+        set => Properties.PutProperty("waypointType", (int)value);
+    }
+
+    // 路径点优先，保证单位 / 路径点 / 路径三类互不重叠。
+    public bool IsRoad => !IsWaypoint && _roadOption != 0;
     
     public override short GetVersion()
     {
@@ -147,10 +159,24 @@ public class ObjectAsset: BaseAsset
                 {"uniqueID", name},
                 {"objectLayer", ""},
                 {"waypointTypeOption", ""},
-                {"waypointType", 1}
+                {"waypointType", (int)WaypointType.Normal}
             }, context);
         
         asset.MarkModified();
+        return asset;
+    }
+
+    public static ObjectAsset OfRoad(string uniqueId, string typeName, Vec3D position, float angle,
+        RoadOptions options, string belongToTeam, BaseContext context)
+    {
+        if (!options.IsRoad)
+        {
+            throw new ArgumentOutOfRangeException(nameof(options), "A road node must have a non-zero option value.");
+        }
+
+        var asset = OfObj(uniqueId, typeName, position, angle, string.Empty, belongToTeam, context);
+        asset.Properties.RemoveProperty("objectName");
+        asset._roadOption = options.RawValue;
         return asset;
     }
 

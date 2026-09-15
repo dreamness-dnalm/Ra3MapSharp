@@ -27,15 +27,23 @@ public class WaypointWrap: ObjectWrap
     
     // TODO: 解析 waypointTypeOption
     
-    // TODO: 解析枚举 waypointType
-    
     /// <summary>
-    /// 路径点类型
+    /// 路径点类型的原始整数值。为保持 API 兼容而保留；
+    /// 新代码可使用 <see cref="WaypointTypeEnum"/>。
     /// </summary>
     public int WaypointType
     {
         get => Properties.GetProperty<int>("waypointType");
         set => Properties.PutProperty("waypointType", value);
+    }
+
+    /// <summary>
+    /// 路径点类型的强类型枚举视图。
+    /// </summary>
+    public WaypointType WaypointTypeEnum
+    {
+        get => Obj.WaypointType;
+        set => Obj.WaypointType = value;
     }
     
     // TODO: 解析更多
