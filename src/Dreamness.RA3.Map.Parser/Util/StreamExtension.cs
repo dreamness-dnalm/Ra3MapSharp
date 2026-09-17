@@ -232,9 +232,16 @@ public static class StreamExtension
 
     public static ushort ToSageFloat16(float v)
     {
-        byte upper = (byte)((v - v % 10f) / 10f);
-        byte lower = (byte)((double)(v % 10f * 256f) / 9.96);
-        return (ushort)((upper << 8) | lower);
+        if (!float.IsFinite(v) || v < 0 || v >= 2560)
+            throw new ArgumentOutOfRangeException(nameof(v), "SAGE height must be finite and in [0, 2560).");
+        var upper = (int)Math.Floor(v / 10f);
+        var fractional = ((double)v - upper * 10) * 256 / 9.96;
+        var nearest = (ushort)((upper << 8) | Math.Clamp((int)Math.Round(fractional), 0, 255));
+        // Decoded float values can sit just below their original fractional code.
+        // Preserve every representable value exactly instead of lowering untouched
+        // terrain on each read/edit/save cycle. Other values retain floor quantization.
+        if (FromSageFloat16(nearest) == v) return nearest;
+        return (ushort)((upper << 8) | Math.Clamp((int)Math.Floor(fractional), 0, 255));
     }
 
     public static float FromSageFloat16(ushort v)

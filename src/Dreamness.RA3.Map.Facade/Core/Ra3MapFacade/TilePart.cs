@@ -239,11 +239,16 @@ public partial class Ra3MapFacade
     }
     
     /// <summary>
-    /// 根据高度信息, 更新地图的通行属性数据, 建议在修改完高度图后调用
+    /// 根据高度重建普通通行标记（45度、一格四邻域扩张），保留特殊标记；不模拟水域、碰撞或单位规则。
     /// </summary>
     public void UpdatePassabilityMap()
     {
         _blendTileData.UpdatePassabilityMap(ra3Map.Context);
+    }
+
+    public void UpdatePassabilityMap(float maxSlopeDegrees, bool expandCardinalHalo)
+    {
+        _blendTileData.UpdatePassabilityMap(ra3Map.Context, maxSlopeDegrees, expandCardinalHalo);
     }
 
     // ---------- blend query functions for editor ----------------

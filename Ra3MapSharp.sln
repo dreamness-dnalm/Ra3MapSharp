@@ -1,5 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
+#
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dreamness.RA3.Map.Parser", "src\Dreamness.RA3.Map.Parser\Dreamness.RA3.Map.Parser.csproj", "{6036C6B3-9C9F-441C-9045-16B727F710AA}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dreamness.RA3.Map.Facade", "src\Dreamness.RA3.Map.Facade\Dreamness.RA3.Map.Facade.csproj", "{5DA30453-98CC-415A-AB58-58ED89F033F5}"
@@ -19,6 +20,18 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dreamness.RA3.Map.Lua", "src\Dreamness.RA3.Map.Lua\Dreamness.RA3.Map.Lua.csproj", "{FAB855D7-86C6-460F-B1B5-181E03237FF7}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dreamness.RA3.Map.Lua.Test", "test\Dreamness.RA3.Map.Lua.Test\Dreamness.RA3.Map.Lua.Test.csproj", "{8B0906C0-17C6-408F-A5D1-8CE001324B1A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dreamness.RA3.Map.Automation", "src\Dreamness.RA3.Map.Automation\Dreamness.RA3.Map.Automation.csproj", "{B0497DD6-0868-4941-8371-765B36704196}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dreamness.RA3.Map.Automation.Test", "test\Dreamness.RA3.Map.Automation.Test\Dreamness.RA3.Map.Automation.Test.csproj", "{7F2A9C4E-1B58-4D3A-9E6F-2C8D4A1B7E90}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{B76BC681-8D43-41FB-88A4-3FB61B37FFAE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dreamness.RA3.Map.Agent", "src\Dreamness.RA3.Map.Agent\Dreamness.RA3.Map.Agent.csproj", "{C2DB4E7D-BDB4-4A95-9B05-83CC7C39A70D}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{17A9D143-74D5-4509-B03B-CBCB782FEEF4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dreamness.RA3.Map.Agent.Test", "test\Dreamness.RA3.Map.Agent.Test\Dreamness.RA3.Map.Agent.Test.csproj", "{C574CE11-D034-4813-B739-9BBEC7A16BBC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -78,5 +91,25 @@ Global
 		{8B0906C0-17C6-408F-A5D1-8CE001324B1A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8B0906C0-17C6-408F-A5D1-8CE001324B1A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8B0906C0-17C6-408F-A5D1-8CE001324B1A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B0497DD6-0868-4941-8371-765B36704196}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B0497DD6-0868-4941-8371-765B36704196}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B0497DD6-0868-4941-8371-765B36704196}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B0497DD6-0868-4941-8371-765B36704196}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7F2A9C4E-1B58-4D3A-9E6F-2C8D4A1B7E90}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7F2A9C4E-1B58-4D3A-9E6F-2C8D4A1B7E90}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7F2A9C4E-1B58-4D3A-9E6F-2C8D4A1B7E90}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7F2A9C4E-1B58-4D3A-9E6F-2C8D4A1B7E90}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C2DB4E7D-BDB4-4A95-9B05-83CC7C39A70D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C2DB4E7D-BDB4-4A95-9B05-83CC7C39A70D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C2DB4E7D-BDB4-4A95-9B05-83CC7C39A70D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C2DB4E7D-BDB4-4A95-9B05-83CC7C39A70D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C574CE11-D034-4813-B739-9BBEC7A16BBC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C574CE11-D034-4813-B739-9BBEC7A16BBC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C574CE11-D034-4813-B739-9BBEC7A16BBC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C574CE11-D034-4813-B739-9BBEC7A16BBC}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{C2DB4E7D-BDB4-4A95-9B05-83CC7C39A70D} = {B76BC681-8D43-41FB-88A4-3FB61B37FFAE}
+		{C574CE11-D034-4813-B739-9BBEC7A16BBC} = {17A9D143-74D5-4509-B03B-CBCB782FEEF4}
 	EndGlobalSection
 EndGlobal

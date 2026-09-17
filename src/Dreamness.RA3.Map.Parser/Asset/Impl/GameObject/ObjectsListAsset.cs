@@ -72,9 +72,9 @@ public class ObjectsListAsset: BaseAsset
     
     public ObjectAsset AddPlayerStartWaypoint(int playerId, Vec3D position, BaseContext context)
     {
-        if (playerId < 0 || playerId > 6)
+        if (playerId < 1 || playerId > 6)
         {
-            throw new System.Exception("Player ID must be between 1 and 6.");
+            throw new ArgumentOutOfRangeException(nameof(playerId), "Player ID must be between 1 and 6.");
         }
         
         var name = $"Player_{playerId}_Start";
