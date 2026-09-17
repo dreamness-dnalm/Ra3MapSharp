@@ -179,7 +179,11 @@
 | 4. ADR | **已完成** | [adr/0001-component-boundaries-and-tfm-matrix.md](adr/0001-component-boundaries-and-tfm-matrix.md)（三部件职责、进程边界、TFM 矩阵、D-C 排除模型层） |
 | 4. 清理 `nul` | **已完成** | 已删除（内容为误重定向产生的 `del: command not found`） |
 | 1. 提交 | 进行中 | 内核+测试、文档+工具两组提交 |
-| 5. 工作区卫生项 | 未开始 | 属 `ra3_map_workspace`，待办 |
+| 5. `emmyrc.json` Lua 版本 | **已完成** | `Lua5.4` → `Lua5.1`（EmmyLua 无 Lua 4 选项，取最保守的近似）；并在 `ra3-map-lua4` 技能中写明"语言服务器不报错 ≠ 语法合法" |
+| 5. skill 绝对路径 | **不需处理** | 实测仅 12 处，且 `execution.md` 已声明"路径不存在时重新定位，不要求复制到固定盘符"；其余为指向本机真实仓库的位置提示 |
+| 5. skill 范围口径 | **已完成** | `ra3-map-authoring/references/execution.md` 原把 AI 地图工作台列为"可选地形来源"，已按 D-C 改为"已移出范围" |
+| 5. `.lib_meta.json` 同步 | **不做（生成物）** | 37 个文件由伴侣侧的 Lua 库管理生成，内含 `FilePath`/`LibPath` 绝对路径；手工编辑会被下次生成覆盖，应由工具在移动后重新生成 |
+| skill 工具口径核对 | **已完成** | 把 `execution.md` 提到的 31 个命令与 `command-schemas.json` 的 51 个逐一对账：**0 个"文档有、实现无"** |
 
 **S0 实测发现（供后续阶段注意）**：作业状态字段是 `data.state`（不是 `data.status`），取值 `running|succeeded|failed|cancelled`；128×128 图的真实鸟瞰图渲染约 **17 秒**。
 
