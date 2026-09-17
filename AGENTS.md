@@ -18,6 +18,13 @@
   - 地图可视化能力（如预览图输出），依赖 Facade。
 - `Dreamness.RA3.Map.Lua`
   - Lua 语法相关能力（ANTLR）。
+- `Dreamness.RA3.Map.Automation`
+  - **面向 AI Agent 的命令内核（WoWA）**：会话/修订/事务/撤销重做、请求去重、对象句柄、候选（prepared plan）、设计实体、依赖图、保护区域、几何与地形算子。
+  - 不依赖 Facade 之外的 UI；纯确定性、可回放，是"编辑器能力"的机器可调用形态。
+  - 入口概念：`CommandRegistry`（注册全部命令）、`AgentRuntime`（会话与作业宿主）。
+- `Dreamness.RA3.Map.Agent`
+  - **Agent 宿主**：MCP stdio 服务（`Protocol/McpServer.cs`）+ JSONL/批处理模式，工具定义在 `Protocol/command-schemas.json`。
+  - 渲染：`Rendering/{DiagnosticRenderer,WorldBuilderRenderer,PreviewInspection}.cs`。诊断图纯托管；真实鸟瞰图交给外部 `WbLauncher.exe`。
 
 ### 1.2 测试项目（`test/`）
 
@@ -26,11 +33,14 @@
 - `Dreamness.Ra3.Map.Transform.Test` -> 测试 Transform。
 - `Dreamness.Ra3.Map.Visualization.Test` -> 测试 Visualization。
 - `Dreamness.RA3.Map.Lua.Test` -> 测试 Lua。
+- `Dreamness.RA3.Map.Automation.Test` -> 测试 Automation 命令内核（不依赖本机 RA3 数据）。
+- `Dreamness.RA3.Map.Agent.Test` -> 测试 Agent 协议与渲染装配（不依赖本机 RA3 数据）。
 
 ### 1.3 依赖关系（核心方向）
 
 - `Parser` <- `Facade` <- (`Transform`, `Visualization`)
-- `Lua` 独立，不依赖上述链路。
+- `Facade` <- `Automation` <- `Agent`
+- `Lua` 独立，不依赖上述链路；`Automation` 目前不依赖 `Lua`。
 
 ## 2. 环境与前置条件
 
@@ -39,6 +49,8 @@
 - 构建系统：`dotnet` CLI + solution `Ra3MapSharp.sln`。
 - 仓库全局配置：`Directory.Build.props`（版本、打包元信息、符号包、SourceLink 等）。
 - 若执行部分 Facade/Transform/Visualization 测试，需要本机存在 RA3 地图目录数据（见 `Ra3PathUtil.RA3MapFolder`）。
+- 真实鸟瞰图（`preview.start` / `--export-overview`）需要外部 `WbLauncher.exe`（新地编启动器），路径通过 `--launcher` 参数或环境变量 `RA3_WB_LAUNCHER` 指定；缺失时文件编辑仍可用，仅真实渲染不可用。
+- 控制台脚本注意：本机只有 **Windows PowerShell 5.1**（无 pwsh 7）。无 BOM 的 `.ps1` 会被按 ANSI 读取而导致中文乱码与解析失败，仓库内 `scripts/*.ps1` 一律保存为 **UTF-8 with BOM**，且避免使用 .NET Core 专属 API（`ProcessStartInfo.ArgumentList`、`StandardInputEncoding`、`ConvertFrom-Json -Depth`）。
 
 ## 3. 常用命令
 
@@ -58,6 +70,13 @@ dotnet build src/Dreamness.RA3.Map.Parser/Dreamness.RA3.Map.Parser.csproj
 # 稳定、推荐优先执行
 dotnet test test/Dreamness.Ra3.Map.Parser.Test/Dreamness.Ra3.Map.Parser.Test.csproj --no-restore
 dotnet test test/Dreamness.RA3.Map.Lua.Test/Dreamness.RA3.Map.Lua.Test.csproj --no-restore
+
+# Automation / Agent（同样稳定；UsageExamples 类是文档性用例，默认排除）
+dotnet test test/Dreamness.RA3.Map.Automation.Test/Dreamness.RA3.Map.Automation.Test.csproj --no-restore --filter "TestCategory!=UsageExamples"
+dotnet test test/Dreamness.RA3.Map.Agent.Test/Dreamness.RA3.Map.Agent.Test.csproj --no-restore
+
+# MCP 端到端连通性探测（握手 + 工具清单；加 -Render 会真正调用 WbLauncher 出图）
+powershell -NoProfile -File scripts/mcp_probe.ps1 -Smoke
 
 # 环境依赖较强（需本机 RA3 地图数据）
 dotnet test test/Dreamness.Ra3.Map.Facade.Test/Dreamness.Ra3.Map.Facade.Test.csproj --no-restore
@@ -85,6 +104,8 @@ dotnet pack Ra3MapSharp.sln -c Release
 
 - `Parser.Test`
 - `Lua.Test`
+- `Automation.Test`（`--filter "TestCategory!=UsageExamples"`）
+- `Agent.Test`
 
 这些测试通常不依赖本机 RA3 安装目录中的真实地图文件。
 
@@ -142,6 +163,14 @@ dotnet pack Ra3MapSharp.sln -c Release
 - 改 `Visualization`：
   - `dotnet build src/Dreamness.Ra3.Map.Visualization/Dreamness.Ra3.Map.Visualization.csproj --no-restore`
   - 如有环境，补跑 `Visualization.Test`。
+- 改 `Automation`：
+  - `dotnet build src/Dreamness.RA3.Map.Automation/Dreamness.RA3.Map.Automation.csproj --no-restore`
+  - `dotnet test test/Dreamness.RA3.Map.Automation.Test/Dreamness.RA3.Map.Automation.Test.csproj --no-restore --filter "TestCategory!=UsageExamples"`
+  - 新增/修改命令时**必须同步 `src/Dreamness.RA3.Map.Agent/Protocol/command-schemas.json`**，否则工具描述与参数校验不一致。
+- 改 `Agent`（含 MCP 协议、渲染装配、`command-schemas.json`）：
+  - `dotnet build src/Dreamness.RA3.Map.Agent/Dreamness.RA3.Map.Agent.csproj --no-restore`
+  - `dotnet test test/Dreamness.RA3.Map.Agent.Test/Dreamness.RA3.Map.Agent.Test.csproj --no-restore`
+  - `powershell -NoProfile -File scripts/mcp_probe.ps1 -Smoke`（真实渲染链路改动时加 `-Render`）
 
 ## 7. 发布与打包
 
@@ -156,7 +185,9 @@ dotnet pack Ra3MapSharp.sln -c Release
 
 - `dotnet test Ra3MapSharp.sln` 在当前环境下可能耗时极长或出现卡住，不作为默认入口命令。
 - 部分测试项目（特别是 Facade/Transform/Visualization）强依赖本机 RA3 地图数据与具体地图名，CI 或新机器上不可直接复现。
-- 当前仓库存在一个未跟踪文件 `nul`，通常应避免将其纳入提交。
+- 当前仓库曾存在一个未跟踪的保留名文件 `nul`（某次误重定向产生，内容为 `del: command not found`），已于 2026-09-18 清理；提交前请确认 `git status` 不再出现它。
+- `Automation` 的会话历史索引存在**每修订全量序列化**问题：`.automation/History/index.json` 在 256×256 图 4 次修订后已达约 30 MB。大图长会话前请留意磁盘占用，并通过 `map.save` 之外的快照/配额手段控制（修复见 Roadmap S5）。
+- `preview.start` 是**作业制**：返回 `jobId` 后需轮询 `jobs.status`；前端进程必须保持 stdin 打开，EOF 会取消未完成作业。
 
 ## 9. 与 `CLAUDE.md` 的关系
 

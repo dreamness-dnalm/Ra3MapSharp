@@ -33,6 +33,13 @@ dotnet test --filter "FullyQualifiedName~BlendTests"
 
 # Run single test method
 dotnet test --filter "FullyQualifiedName~BlendTests.TestGetBlendDetailInfo"
+
+# Agent stack: stable, no RA3 install needed (159 + 23 tests)
+dotnet test test/Dreamness.RA3.Map.Automation.Test/Dreamness.RA3.Map.Automation.Test.csproj --no-restore --filter "TestCategory!=UsageExamples"
+dotnet test test/Dreamness.RA3.Map.Agent.Test/Dreamness.RA3.Map.Agent.Test.csproj --no-restore
+
+# MCP end-to-end probe: handshake + tool list; -Render additionally renders via WbLauncher.exe
+powershell -NoProfile -File scripts/mcp_probe.ps1 -Smoke
 ```
 
 ### Packaging
@@ -72,6 +79,18 @@ The codebase follows a layered architecture with clear separation of concerns:
 5. **Lua Layer** (`Dreamness.RA3.Map.Lua`)
    - Lua script parsing using ANTLR4
    - Grammar file: `Lua4.g4`
+
+6. **Automation Layer** (`Dreamness.RA3.Map.Automation`)
+   - The command kernel ("WoWA") that exposes editor capability as deterministic, machine-callable commands.
+   - Sessions, revisions, transactions, undo/redo, request dedup, object handles, prepared candidates, design entities, dependency graph, protection zones, geometry/terrain operators.
+   - Entry points: `CommandRegistry` (registers every command), `AgentRuntime` (session + job host).
+   - Every mutation requires an explicit `expectedRevision`; this is what makes concurrent edits detectable instead of silently lost.
+
+7. **Agent Layer** (`Dreamness.RA3.Map.Agent`)
+   - Host process for the kernel: MCP stdio server (`Protocol/McpServer.cs`), plus JSONL/one-shot batch modes.
+   - Tool surface: 51 MCP tools defined by `Protocol/command-schemas.json` (`map.*`, `terrain.*`, `objects.*`, `texture.*`, `design.*`, `edits.*`, `preview.*`, `jobs.*`, `protections.*`, `history.*`).
+   - Rendering: `Rendering/{DiagnosticRenderer,WorldBuilderRenderer,PreviewInspection}.cs`. Diagnostic images are pure managed; real overview images are delegated to the external `WbLauncher.exe` and are **asynchronous jobs** (`preview.start` returns a `jobId`; poll `jobs.status`; EOF on stdin cancels outstanding jobs).
+   - Real overview rendering needs `--launcher <WbLauncher.exe>` or `RA3_WB_LAUNCHER`. Without it, file editing still works and only real rendering is unavailable.
 
 ### Asset System
 
@@ -191,10 +210,15 @@ Assets use lazy parsing - they're only parsed when accessed:
 
 - `Directory.Build.props`: Shared MSBuild properties (version, author, license)
 - `src/Dreamness.RA3.Map.Parser/data/script_declare/`: Script definitions
+- `src/Dreamness.RA3.Map.Agent/Protocol/command-schemas.json`: The MCP tool surface. **Adding or changing a command requires updating this file in the same change**, otherwise tool descriptions and argument validation drift.
 - `docs/BlendQueryAPI.md`: Comprehensive texture blending API documentation
+- `docs/Agent-Usage.md`, `docs/MCP-Usage.md`: How an agent drives the kernel over MCP (session/revision discipline, candidate workflow).
+- `docs/Agent-System-Roadmap.md`: Feasibility conclusion and phased plan for the whole agent-map-authoring system (includes the current scope decisions).
 
 ## Development Notes
 
+- **PowerShell**: only Windows PowerShell 5.1 is available on this machine (no pwsh 7). A `.ps1` without a BOM is read as ANSI, which corrupts non-ASCII text and breaks parsing — keep `scripts/*.ps1` saved as **UTF-8 with BOM** and avoid .NET Core-only APIs (`ProcessStartInfo.ArgumentList`, `StandardInputEncoding`, `ConvertFrom-Json -Depth`).
+- Known perf issue: `.automation/History/index.json` serializes `designEntities` in full for every revision — about 30 MB after 4 revisions on a 256x256 map.
 - Target framework: .NET 6.0
 - Nullable reference types enabled
 - Unsafe code blocks allowed in Parser (for performance)
