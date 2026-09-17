@@ -60,7 +60,7 @@ public sealed partial class MapSession
                 workspace.Dirty = false;
                 await AutomationJson.WriteAsync(staging.MapInfoFilePath, new MapInfo { MapId = mapId }, token);
                 await AutomationJson.WriteAsync(staging.WorkspaceFilePath, workspace, token);
-                await AutomationJson.WriteAsync(staging.HistoryIndexFilePath, _history, token);
+                await HistoryIndexStore.WriteAsync(staging.HistoryIndexFilePath, _history, token);
                 if (File.Exists(_layout.HistoryLogFilePath))
                     await Write(staging.HistoryLogFilePath, await File.ReadAllBytesAsync(_layout.HistoryLogFilePath, token));
                 foreach (var path in new[] { staging.MapInfoFilePath, staging.WorkspaceFilePath, staging.HistoryIndexFilePath })

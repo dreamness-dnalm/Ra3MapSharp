@@ -34,7 +34,7 @@ dotnet test --filter "FullyQualifiedName~BlendTests"
 # Run single test method
 dotnet test --filter "FullyQualifiedName~BlendTests.TestGetBlendDetailInfo"
 
-# Agent stack: stable, no RA3 install needed (159 + 23 tests)
+# Agent stack: stable, no RA3 install needed (163 + 23 tests)
 dotnet test test/Dreamness.RA3.Map.Automation.Test/Dreamness.RA3.Map.Automation.Test.csproj --no-restore --filter "TestCategory!=UsageExamples"
 dotnet test test/Dreamness.RA3.Map.Agent.Test/Dreamness.RA3.Map.Agent.Test.csproj --no-restore
 
@@ -218,7 +218,7 @@ Assets use lazy parsing - they're only parsed when accessed:
 ## Development Notes
 
 - **PowerShell**: only Windows PowerShell 5.1 is available on this machine (no pwsh 7). A `.ps1` without a BOM is read as ANSI, which corrupts non-ASCII text and breaks parsing — keep `scripts/*.ps1` saved as **UTF-8 with BOM** and avoid .NET Core-only APIs (`ProcessStartInfo.ArgumentList`, `StandardInputEncoding`, `ConvertFrom-Json -Depth`).
-- Known perf issue: `.automation/History/index.json` serializes `designEntities` in full for every revision — about 30 MB after 4 revisions on a 256x256 map.
+- History index (`.automation/History/index.json`, schemaVersion 9) stores design entities as **per-revision deltas** on disk and forward-fills them on load. The same workload (one 200x200 platform + 120 objects, 4 revisions) went from 21.9 MB to 1.73 MB, and the per-revision increment from ~5.5 MB to ~8 KB. The in-memory model still keeps a complete state per revision so undo/redo stays a direct lookup: long sessions still grow RSS with (revisions x total entity area), and `waypointObjectIds`/`unitObjectIds` are still written in full per revision. Keep `DesignHash()` producing identical values, or existing workspaces get reported as design-dirty.
 - Target framework: .NET 6.0
 - Nullable reference types enabled
 - Unsafe code blocks allowed in Parser (for performance)

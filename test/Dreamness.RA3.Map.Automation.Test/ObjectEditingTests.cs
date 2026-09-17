@@ -214,7 +214,7 @@ public class ObjectEditingTests
         var id = Data(await Run("objects.query", new { })).GetProperty("items")[0].GetProperty("objectId").GetString();
         Data(await Run("history.undo", new { }));
         Assert.That(Data(await Run("objects.query", new { })).GetProperty("items")[0].GetProperty("objectId").GetString(), Is.EqualTo(id));
-        Assert.That(JsonNode.Parse(File.ReadAllText(indexPath))!["schemaVersion"]!.GetValue<int>(), Is.EqualTo(8));
+        Assert.That(JsonNode.Parse(File.ReadAllText(indexPath))!["schemaVersion"]!.GetValue<int>(), Is.EqualTo(9));
     }
 
     [TestCase("*Waypoints/Waypoint")]

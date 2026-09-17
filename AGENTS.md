@@ -51,6 +51,8 @@
 - 若执行部分 Facade/Transform/Visualization 测试，需要本机存在 RA3 地图目录数据（见 `Ra3PathUtil.RA3MapFolder`）。
 - 真实鸟瞰图（`preview.start` / `--export-overview`）需要外部 `WbLauncher.exe`（新地编启动器），路径通过 `--launcher` 参数或环境变量 `RA3_WB_LAUNCHER` 指定；缺失时文件编辑仍可用，仅真实渲染不可用。
 - 控制台脚本注意：本机只有 **Windows PowerShell 5.1**（无 pwsh 7）。无 BOM 的 `.ps1` 会被按 ANSI 读取而导致中文乱码与解析失败，仓库内 `scripts/*.ps1` 一律保存为 **UTF-8 with BOM**，且避免使用 .NET Core 专属 API（`ProcessStartInfo.ArgumentList`、`StandardInputEncoding`、`ConvertFrom-Json -Depth`）。
+- **改完 `.ps1` 要重新确认 BOM**：编辑工具写出的是**无 BOM** 的 UTF-8。含中文的 `scripts/*.ps1` 被编辑后 BOM 会丢失，PowerShell 5.1 随即按 ANSI 读取，报 `Unexpected token` 之类的解析错误（错误信息本身还会显示为乱码）。改完用 `[System.IO.File]::ReadAllBytes($p)[0..2]` 确认首字节是 `239,187,191`，不是就用 `[System.IO.File]::WriteAllText($p, (Get-Content $p -Raw), (New-Object System.Text.UTF8Encoding($true)))` 写回。
+- **反方向的 BOM 坑**：`Set-Content -Encoding UTF8` 会**写出** BOM。外部工具的 JSON 配置不接受 BOM——给地编启动器的 `data/config/map-task-launch.json` 写配置时，用 `Set-Content` 会让渲染在 2 秒内失败并报 `'0xEF' is an invalid start of a value. LineNumber: 0`。写这类文件必须用 `[System.IO.File]::WriteAllText($path, $json, (New-Object System.Text.UTF8Encoding($false)))`，改完用 `[System.IO.File]::ReadAllBytes($path)[0..2]` 确认首字节不是 `239,187,191`。
 
 ## 3. 常用命令
 
@@ -186,7 +188,7 @@ dotnet pack Ra3MapSharp.sln -c Release
 - `dotnet test Ra3MapSharp.sln` 在当前环境下可能耗时极长或出现卡住，不作为默认入口命令。
 - 部分测试项目（特别是 Facade/Transform/Visualization）强依赖本机 RA3 地图数据与具体地图名，CI 或新机器上不可直接复现。
 - 当前仓库曾存在一个未跟踪的保留名文件 `nul`（某次误重定向产生，内容为 `del: command not found`），已于 2026-09-18 清理；提交前请确认 `git status` 不再出现它。
-- `Automation` 的会话历史索引存在**每修订全量序列化**问题：`.automation/History/index.json` 在 256×256 图 4 次修订后已达约 30 MB。大图长会话前请留意磁盘占用，并通过 `map.save` 之外的快照/配额手段控制（修复见 Roadmap S5）。
+- `Automation` 的会话历史索引（`.automation/History/index.json`，schemaVersion 9）**在磁盘上按修订增量存储**：每个修订只写负载真正变化的设计实体与被移除的实体 id，读取时前向回填为完整状态。同一负载（1 个 200×200 platform + 120 个对象、4 次修订）由 21.9 MB 降到 1.73 MB，每修订增量由约 +5.5 MB 降到约 +8 KB。**内存中每个修订仍保留完整状态**（撤销/重做是直接查表），故长会话 RSS 仍随"修订数 × 设计实体总面积"增长；`waypointObjectIds`/`unitObjectIds` 也仍按修订全量存储。改这块时**务必保持 `DesignHash()` 的算法不变**，否则现存工作区会被误判为"设计已脏"。
 - `preview.start` 是**作业制**：返回 `jobId` 后需轮询 `jobs.status`；前端进程必须保持 stdin 打开，EOF 会取消未完成作业。
 
 ## 9. 与 `CLAUDE.md` 的关系

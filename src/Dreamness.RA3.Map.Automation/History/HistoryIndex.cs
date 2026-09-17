@@ -2,7 +2,10 @@ namespace Dreamness.RA3.Map.Automation.History;
 
 internal sealed class HistoryIndex
 {
-    public const int CurrentSchemaVersion = 8;
+    // 9 stores design entities as per-revision deltas instead of a complete snapshot per
+    // revision. The bump is what makes an older reader reject the file instead of silently
+    // reading every revision as having no design entities.
+    public const int CurrentSchemaVersion = 9;
 
     public int SchemaVersion { get; set; } = CurrentSchemaVersion;
 

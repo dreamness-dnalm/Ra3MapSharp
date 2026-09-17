@@ -21,7 +21,7 @@ public sealed partial class MapSession
         // checked that the saved file has not changed before resuming a dirty workspace.
         if (string.IsNullOrEmpty(_workspace.LastSavedMapHash))
             _workspace.LastSavedMapHash = ContentHasher.HashMap(Ra3MapFacade.Open(UserMapFilePath));
-        var loaded = await AutomationJson.ReadAsync<HistoryIndex>(_layout.HistoryIndexFilePath, cancellationToken)
+        var loaded = await HistoryIndexStore.ReadAsync(_layout.HistoryIndexFilePath, cancellationToken)
             .ConfigureAwait(false);
         if (loaded == null || loaded.Entries.Count == 0)
         {
@@ -35,7 +35,7 @@ public sealed partial class MapSession
             _workspace.HistoryCursor = 0;
             var files = new FileTransaction();
             files.Add(_layout.SnapshotFilePath(0), await File.ReadAllBytesAsync(WorkingMapFilePath, cancellationToken));
-            files.AddJson(_layout.HistoryIndexFilePath, _history);
+            files.Add(_layout.HistoryIndexFilePath, HistoryIndexStore.Serialize(_history));
             files.AddJson(_layout.WorkspaceFilePath, _workspace);
             await files.CommitAsync(cancellationToken).ConfigureAwait(false);
             return;
@@ -47,10 +47,12 @@ public sealed partial class MapSession
         if (ContentHasher.HashMap(currentSnapshot) != ContentHasher.HashMap(Facade))
             throw new AutomationException("WORKSPACE_CONFLICT", "历史快照与当前工作副本不一致。");
         if (loaded.SchemaVersion == 1) await MigrateObjectHandlesAsync(loaded, cancellationToken);
-        if (loaded.SchemaVersion is 2 or 3 or 4 or 5 or 6 or 7)
+        if (loaded.SchemaVersion is 2 or 3 or 4 or 5 or 6 or 7 or 8)
         {
+            // Older revisions stored a complete snapshot per revision; the data is complete,
+            // so this is a format upgrade with no semantic conversion.
             loaded.SchemaVersion = HistoryIndex.CurrentSchemaVersion;
-            await AutomationJson.WriteAsync(_layout.HistoryIndexFilePath, loaded, cancellationToken);
+            await HistoryIndexStore.WriteAsync(_layout.HistoryIndexFilePath, loaded, cancellationToken);
         }
         if (loaded.SchemaVersion != HistoryIndex.CurrentSchemaVersion)
             throw new AutomationException("UNSUPPORTED_VERSION", "不支持的历史版本。");
@@ -84,7 +86,7 @@ public sealed partial class MapSession
         foreach (var entry in history.Entries) entry.UnitObjectIds = ids.ToList();
         history.NextHandle = next;
         history.SchemaVersion = HistoryIndex.CurrentSchemaVersion;
-        await AutomationJson.WriteAsync(_layout.HistoryIndexFilePath, history, cancellationToken);
+        await HistoryIndexStore.WriteAsync(_layout.HistoryIndexFilePath, history, cancellationToken);
     }
 
     internal Task CommitMutationAsync(string command, Func<Task> mutate, CancellationToken cancellationToken) =>
@@ -158,7 +160,7 @@ public sealed partial class MapSession
             var files = new FileTransaction();
             files.Add(WorkingMapFilePath, mapBytes);
             if (!cursor.HasValue) files.Add(_layout.SnapshotFilePath(_history.Cursor), mapBytes);
-            files.AddJson(_layout.HistoryIndexFilePath, _history);
+            files.Add(_layout.HistoryIndexFilePath, HistoryIndexStore.Serialize(_history));
             files.AddJson(_layout.WorkspaceFilePath, _workspace);
             var log = File.Exists(_layout.HistoryLogFilePath)
                 ? await File.ReadAllTextAsync(_layout.HistoryLogFilePath, cancellationToken).ConfigureAwait(false) : "";
@@ -265,6 +267,6 @@ public sealed partial class MapSession
     private Task SaveHistoryIndexAsync(CancellationToken cancellationToken)
     {
         _history.NextHandle = Handles.NextHandle;
-        return AutomationJson.WriteAsync(_layout.HistoryIndexFilePath, _history, cancellationToken);
+        return HistoryIndexStore.WriteAsync(_layout.HistoryIndexFilePath, _history, cancellationToken);
     }
 }
