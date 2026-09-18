@@ -20,9 +20,9 @@ public static class CommandSchemas
         return Definitions.OrderBy(p => p.Key, StringComparer.Ordinal).Select(pair =>
         {
             var hasEffect = effects.TryGetValue(pair.Key, out var effect);
-            var session = hasEffect ? effect != CommandEffect.Session : pair.Key is "map.close" or "preview.start" or "batch.execute" or "diagnostics.render";
+            var session = hasEffect ? effect != CommandEffect.Session : pair.Key is "map.close" or "preview.start" or "review.render_set" or "batch.execute" or "diagnostics.render";
             var revision = hasEffect && effect is CommandEffect.Mutation or CommandEffect.History or CommandEffect.Export || pair.Key == "batch.execute";
-            var readOnly = hasEffect ? effect == CommandEffect.Query : pair.Key is "system.capabilities" or "system.schema" or "assets.objects" or "assets.catalog_info" or "assets.search" or "assets.album" or "art.rules" or "footprints.get" or "footprints.list" or "jobs.status";
+            var readOnly = hasEffect ? effect == CommandEffect.Query : pair.Key is "system.capabilities" or "system.schema" or "assets.objects" or "assets.catalog_info" or "assets.search" or "assets.album" or "art.rules" or "review.render_set" or "footprints.get" or "footprints.list" or "jobs.status";
             if (pair.Key is "edits.prepare" or "edits.discard" or "design.prepare") readOnly = false;
             var required = new List<string>();
             if (session) required.Add("sessionId");

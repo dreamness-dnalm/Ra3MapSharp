@@ -119,6 +119,16 @@ public class ArtRulesTests
     }
 
     [Test]
+    public async Task ReviewRefusesWithoutARenderer()
+    {
+        // review.render_set composes images, so a host with no launcher must say so rather than
+        // return a verdict with no pictures behind it.
+        await using var runtime = new AgentRuntime(artRules: Sample());
+        var result = await runtime.ExecuteAsync(new CommandRequest { Command = "review.render_set" });
+        Assert.That(result.Error?.Code, Is.EqualTo("RENDER_NOT_CONFIGURED"));
+    }
+
+    [Test]
     public async Task ArtRulesToolWithoutRulesSaysSo()
     {
         await using var runtime = new AgentRuntime();

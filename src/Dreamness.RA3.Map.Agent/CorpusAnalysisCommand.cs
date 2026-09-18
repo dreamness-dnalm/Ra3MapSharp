@@ -80,86 +80,13 @@ internal static class CorpusAnalysisCommand
     private static ArtRuleMap Analyze(FileInfo file, IReadOnlyDictionary<string, string>? categoryLookup,
         int sampleTarget, CancellationToken token)
     {
-        var map = Ra3MapFacade.Open(file.FullName);
-        var width = map.MapPlayableWidth;
-        var height = map.MapPlayableHeight;
-        var cells = (long)width * height;
-        var stride = Math.Max(1, (int)Math.Ceiling(Math.Sqrt(cells / (double)sampleTarget)));
-
-        var textureCounts = new Dictionary<string, int>(StringComparer.Ordinal);
-        var pairCounts = new Dictionary<(string Primary, string Secondary), int>();
-        int sampled = 0, transitions = 0, blended = 0;
-        for (var y = 0; y < height; y += stride)
-        {
-            for (var x = 0; x < width; x += stride)
-            {
-                token.ThrowIfCancellationRequested();
-                var (primary, secondary) = map.GetTexturesInvolved(x, y);
-                if (string.IsNullOrEmpty(primary)) continue;
-                sampled++;
-                textureCounts[primary] = textureCounts.TryGetValue(primary, out var seen) ? seen + 1 : 1;
-                // Transition materials show up as the blended-in secondary, not as the primary,
-                // so counting only the primary reported a flat zero for the whole corpus.
-                if (TextureSemantics.IsTransition(primary)
-                    || (secondary != null && TextureSemantics.IsTransition(secondary))) transitions++;
-                if (secondary == null) continue;
-                blended++;
-                var pair = (primary, secondary);
-                pairCounts[pair] = pairCounts.TryGetValue(pair, out var pairs) ? pairs + 1 : 1;
-            }
-        }
-
-        var ranked = textureCounts.OrderByDescending(pair => pair.Value).ToArray();
-        var total = Math.Max(1, sampled);
-        var objects = map.GetUnitObjects();
-        var categories = new SortedDictionary<string, int>(StringComparer.Ordinal);
-        var positions = new List<(double X, double Y)>(objects.Count);
-        foreach (var placed in objects)
-        {
-            var label = categoryLookup != null && categoryLookup.TryGetValue(placed.TypeName, out var known)
-                ? known : "unclassified";
-            categories[label] = categories.TryGetValue(label, out var count) ? count + 1 : 1;
-            positions.Add((placed.Position.X / 10d, placed.Position.Y / 10d));
-        }
-
-        return new ArtRuleMap(
-            file.Name,
-            width, height, cells, sampled,
-            textureCounts.Count,
-            ranked.Length > 0 ? ranked[0].Value / (double)total : 0,
-            ranked.Take(3).Sum(pair => pair.Value) / (double)total,
-            transitions / (double)total,
-            blended / (double)total,
-            objects.Count,
-            objects.Count * 1000.0 / Math.Max(1, cells),
-            ClumpingIndex(positions, width, height, 8),
-            categories,
-            pairCounts.OrderByDescending(pair => pair.Value).Take(40)
-                .Select(pair => new ArtRulePair(pair.Key.Primary, pair.Key.Secondary, 1, pair.Value)).ToList());
-    }
-
-    /// <summary>
-    /// Variance-to-mean ratio of object counts in 8-cell quadrats. About 1 means the objects are
-    /// scattered independently, well above 1 means clumped into groves or bases, and well below 1
-    /// means an even layout. This is what turns "do not scatter on a regular grid" into a number.
-    /// </summary>
-    private static double ClumpingIndex(IReadOnlyList<(double X, double Y)> points, int width, int height, int quadrat)
-    {
-        var columns = width / quadrat;
-        var rows = height / quadrat;
-        if (columns < 2 || rows < 2 || points.Count < 50) return 0;
-        var counts = new int[columns * rows];
-        foreach (var (x, y) in points)
-        {
-            var column = (int)(x / quadrat);
-            var row = (int)(y / quadrat);
-            if (column < 0 || row < 0 || column >= columns || row >= rows) continue;
-            counts[row * columns + column]++;
-        }
-        var mean = counts.Average();
-        if (mean <= 0) return 0;
-        var variance = counts.Sum(count => (count - mean) * (count - mean)) / counts.Length;
-        return variance / mean;
+        // The same measurement the review command applies to work in progress: a rubric is only
+        // meaningful when the judged number and the threshold were produced the same way.
+        var profile = MapArtProfile.Measure(Ra3MapFacade.Open(file.FullName), categoryLookup, sampleTarget, token);
+        return new ArtRuleMap(file.Name, profile.Width, profile.Height, profile.Cells, profile.SampledCells,
+            profile.DistinctTextures, profile.TopTextureShare, profile.TopThreeShare, profile.TransitionShare,
+            profile.BlendedShare, profile.Objects, profile.ObjectsPer1000Cells, profile.ClumpingIndex,
+            profile.Categories, profile.Pairs);
     }
 
     private static void Aggregate(ArtRules rules)

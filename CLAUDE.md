@@ -34,7 +34,7 @@ dotnet test --filter "FullyQualifiedName~BlendTests"
 # Run single test method
 dotnet test --filter "FullyQualifiedName~BlendTests.TestGetBlendDetailInfo"
 
-# Agent stack: stable, no RA3 install needed (184 + 37 tests)
+# Agent stack: stable, no RA3 install needed (191 + 38 tests)
 dotnet test test/Dreamness.RA3.Map.Automation.Test/Dreamness.RA3.Map.Automation.Test.csproj --no-restore --filter "TestCategory!=UsageExamples"
 dotnet test test/Dreamness.RA3.Map.Agent.Test/Dreamness.RA3.Map.Agent.Test.csproj --no-restore
 
@@ -88,7 +88,7 @@ The codebase follows a layered architecture with clear separation of concerns:
 
 7. **Agent Layer** (`Dreamness.RA3.Map.Agent`)
    - Host process for the kernel: MCP stdio server (`Protocol/McpServer.cs`), plus JSONL/one-shot batch modes.
-   - Tool surface: 58 MCP tools defined by `Protocol/command-schemas.json` (`map.*`, `terrain.*`, `objects.*`, `texture.*`, `design.*`, `edits.*`, `preview.*`, `jobs.*`, `protections.*`, `history.*`).
+   - Tool surface: 60 MCP tools defined by `Protocol/command-schemas.json` (`map.*`, `terrain.*`, `objects.*`, `texture.*`, `design.*`, `edits.*`, `preview.*`, `jobs.*`, `protections.*`, `history.*`).
    - Rendering: `Rendering/{DiagnosticRenderer,WorldBuilderRenderer,PreviewInspection}.cs`. Diagnostic images are pure managed; real overview images are delegated to the external `WbLauncher.exe` and are **asynchronous jobs** (`preview.start` returns a `jobId`; poll `jobs.status`; EOF on stdin cancels outstanding jobs).
    - Real overview rendering needs `--launcher <WbLauncher.exe>` or `RA3_WB_LAUNCHER`. Without it, file editing still works and only real rendering is unavailable.
 
@@ -214,7 +214,7 @@ Assets use lazy parsing - they're only parsed when accessed:
 - `docs/BlendQueryAPI.md`: Comprehensive texture blending API documentation
 - `docs/Agent-Usage.md`, `docs/MCP-Usage.md`: How an agent drives the kernel over MCP (session/revision discipline, candidate workflow).
 - `docs/Agent-System-Roadmap.md`: Feasibility conclusion and phased plan for the whole agent-map-authoring system (includes the current scope decisions).
-- `src/Dreamness.RA3.Map.Automation/Catalog/`: the asset catalogue (textures with derived surface/theme semantics, editor-declared objects, categories, screenshot coverage), the rendered `AssetAlbum`, and `ObjectCatalog`. Build the catalogue with `dotnet <agent.dll> --build-catalog <path> --launcher <WbLauncher.exe>`; build appearance images for the 1206 objects the editor ships no screenshot for with `--build-album <artifacts>/album`. The host auto-loads `<artifacts>/catalog/catalog.json` and `<artifacts>/album/album.json`, served by `assets.catalog_info` / `assets.search` / `assets.album` (`assets.album` returns the PNG as MCP image content). Measure placement footprints from those renders with `--build-footprints <artifacts>/footprints/footprints.json`; `footprints.get/list/set` serve them, hand corrections live in a separate overrides file, and `objects.scatter` uses them automatically when the caller passes none and every relevant type is measured. Measure art-direction thresholds from the shipped-map corpus with `--analyze-corpus <artifacts>/art-rules/art-rules.json --corpus <origin_maps>`; `art.rules` reports them (material counts and shares, blend share, prop density, clumping, category mix, and the most-used texture pairs).
+- `src/Dreamness.RA3.Map.Automation/Catalog/`: the asset catalogue (textures with derived surface/theme semantics, editor-declared objects, categories, screenshot coverage), the rendered `AssetAlbum`, and `ObjectCatalog`. Build the catalogue with `dotnet <agent.dll> --build-catalog <path> --launcher <WbLauncher.exe>`; build appearance images for the 1206 objects the editor ships no screenshot for with `--build-album <artifacts>/album`. The host auto-loads `<artifacts>/catalog/catalog.json` and `<artifacts>/album/album.json`, served by `assets.catalog_info` / `assets.search` / `assets.album` (`assets.album` returns the PNG as MCP image content). Measure placement footprints from those renders with `--build-footprints <artifacts>/footprints/footprints.json`; `footprints.get/list/set` serve them, hand corrections live in a separate overrides file, and `objects.scatter` uses them automatically when the caller passes none and every relevant type is measured. Measure art-direction thresholds from the shipped-map corpus with `--analyze-corpus <artifacts>/art-rules/art-rules.json --corpus <origin_maps>`; `art.rules` reports them (material counts and shares, blend share, prop density, clumping, category mix, and the most-used texture pairs). `art.profile` measures the open map the same way, and `review.render_set` renders a north-up overview plus four fixed-fraction local crops into one contact sheet while judging the same revision against those thresholds (`combatReadability` is reported as not-evaluated on purpose: it needs eyes).
 
 ## Development Notes
 

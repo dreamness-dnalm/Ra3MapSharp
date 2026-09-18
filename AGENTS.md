@@ -25,6 +25,7 @@
 - `Dreamness.RA3.Map.Agent`
   - **Agent 宿主**：MCP stdio 服务（`Protocol/McpServer.cs`）+ JSONL/批处理模式，工具定义在 `Protocol/command-schemas.json`。
   - 渲染：`Rendering/{DiagnosticRenderer,WorldBuilderRenderer,PreviewInspection}.cs`。诊断图纯托管；真实鸟瞰图交给外部 `WbLauncher.exe`。
+  - 评审闭环：`art.profile` 用与语料分析**同一份代码**测量当前地图；`review.render_set` 渲染总览 + 4 张固定比例局部并合成一张评审大图，同时对同一修订产出 rubric（每条检查写明实测值、阈值与阈值出处；`combatReadability` 标为 not-evaluated）。
   - 美术规则：`--analyze-corpus --corpus <origin_maps>` 从 shipped 地图语料量出材质/密度/聚簇阈值，`art.rules` 汇报（含实测纹理配对）。单图解析失败会记为 failure 而不中断整轮。
   - 素材目录与图册：`--build-catalog` 生成 `<artifacts>/catalog/catalog.json`，`--build-album <artifacts>/album` 生成物体外观图册（并附一张**空网格参考渲染**），`--build-footprints` 由图册量得占地；宿主自动加载，由 `assets.catalog_info` / `assets.search` / `assets.album` / `footprints.get|list|set` 提供。`objects.scatter` 在未传 `footprints` 且相关类型全部有量测时自动取用目录值。
 

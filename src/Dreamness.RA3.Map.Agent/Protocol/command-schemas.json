@@ -1012,6 +1012,54 @@
       "additionalProperties": false
     }
   },
+  "art.profile": {
+    "description": "Measure the open map's art profile: material variety and shares, blend share, prop density, clumping, and category mix. Reports, does not judge.",
+    "argumentsSchema": {
+      "type": "object",
+      "properties": {
+        "sampleTarget": {
+          "type": "integer",
+          "minimum": 1000,
+          "maximum": 1000000,
+          "default": 30000
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  "review.render_set": {
+    "description": "Render a review set for the current revision: a north-up overview plus four local crops at fixed fractions, composed into one contact sheet, together with the rubric verdict against the thresholds measured from shipped maps.",
+    "argumentsSchema": {
+      "type": "object",
+      "properties": {
+        "requiredRevision": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "preparedPlanId": {
+          "type": "string"
+        },
+        "planHash": {
+          "type": "string"
+        },
+        "localCells": {
+          "type": "integer",
+          "minimum": 8,
+          "maximum": 512,
+          "default": 64
+        },
+        "sampleTarget": {
+          "type": "integer",
+          "minimum": 1000,
+          "maximum": 1000000,
+          "default": 30000
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    }
+  },
   "art.rules": {
     "description": "Report art-direction statistics measured from shipped maps: material counts and shares, blend share, prop density, clumping, category mix, and the rules derived from them.",
     "argumentsSchema": {

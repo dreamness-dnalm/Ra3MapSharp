@@ -17,6 +17,7 @@ public sealed class AgentRuntime : IAsyncDisposable
     private readonly AssetCatalog? _assets;
     private readonly FootprintCatalog? _footprints;
     private readonly ArtRules? _artRules;
+    private readonly Dictionary<string, string>? _categoryLookup;
     private readonly string? _footprintOverridesPath;
     private readonly CommandExecutor _executor;
     private readonly WorldBuilderRenderer? _renderer;
@@ -37,6 +38,12 @@ public sealed class AgentRuntime : IAsyncDisposable
         _footprints = footprints;
         _footprintOverridesPath = footprintOverridesPath;
         _artRules = artRules;
+        _categoryLookup = catalog?.Entries
+            .GroupBy(entry => entry.TypeName, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key,
+                group => group.First().Categories.FirstOrDefault(label => label != "editor-translation")
+                    ?? "unclassified",
+                StringComparer.Ordinal);
         _registry = CommandRegistry.CreateDefault(catalog, footprints);
         _renderer = renderer;
         _executor = new CommandExecutor(_registry);
@@ -56,7 +63,7 @@ public sealed class AgentRuntime : IAsyncDisposable
                 return Success(request, new
                 {
                     protocol = "ra3-agent-jsonl-v1", transports = new[] { "jsonl", "mcp-stdio-2025-06-18" }, commands = _registry.Describe(),
-                    hostCommands = new[] { "system.capabilities", "system.schema", "assets.objects", "assets.catalog_info", "assets.search", "assets.album", "art.rules", "footprints.get", "footprints.list", "footprints.set", "map.inspect_file", "map.close", "preview.start", "preview.inspect", "diagnostics.render", "jobs.status", "jobs.cancel" },
+                    hostCommands = new[] { "system.capabilities", "system.schema", "assets.objects", "assets.catalog_info", "assets.search", "assets.album", "art.rules", "review.render_set", "footprints.get", "footprints.list", "footprints.set", "map.inspect_file", "map.close", "preview.start", "preview.inspect", "diagnostics.render", "jobs.status", "jobs.cancel" },
                     objectCatalog = _catalog == null ? null : new { _catalog.SourcePath, _catalog.ContentHash, _catalog.Count, _catalog.Sources },
                     artRules = _artRules == null ? null : new { _artRules.RulesHash, maps = _artRules.Maps.Count,
                         _artRules.BuiltAtUtc, _artRules.CorpusPath },
@@ -99,6 +106,37 @@ public sealed class AgentRuntime : IAsyncDisposable
             {
                 if (_assets == null) throw MissingCatalog();
                 return Success(request, _assets.Search(Arguments<AssetSearchQuery>(request)));
+            }
+            if (request.Command == "review.render_set")
+            {
+                if (_renderer == null) throw new AutomationException("RENDER_NOT_CONFIGURED", "宿主未配置 --launcher。");
+                var args = Arguments<ReviewArguments>(request);
+                var snapshot = await CaptureViewAsync(request, args.RequiredRevision, args.PreparedPlanId, args.PlanHash, token);
+                Rendering.OverviewResult overview;
+                // Reuse the render gate: the launcher is a single external process.
+                await _renderGate.WaitAsync(token);
+                try { overview = await _renderer.RenderAsync(snapshot, token); }
+                finally { _renderGate.Release(); }
+
+                // The kernel measures; the host only composes images and judges against thresholds.
+                var measured = await _executor.ExecuteAsync(new CommandRequest
+                {
+                    RequestId = request.RequestId + "-profile",
+                    Command = "art.profile",
+                    SessionId = request.SessionId,
+                    Arguments = JsonSerializer.SerializeToElement(new { sampleTarget = args.SampleTarget })
+                }, token);
+                if (measured.Status != "succeeded" || measured.Data is not MapArtProfile profile)
+                    throw new AutomationException(measured.Error?.Code ?? "PROFILE_FAILED",
+                        "无法测量当前地图: " + measured.Error?.Message);
+                var rubric = ArtRubric.Evaluate(profile, _artRules);
+                var directory = Path.Combine(_diagnosticsRoot, "review",
+                    overview.MapContentHash.Replace("sha256:", "")[..Math.Min(16, overview.MapContentHash.Length - 7)]);
+                var composed = await Rendering.ReviewRenderSet.ComposeAsync(overview, LocalShots(profile),
+                    args.LocalCells, directory, token);
+                return Success(request, new Rendering.ReviewResult(composed.Path, composed.Hash,
+                    overview.MapContentHash, overview.RendererConfigHash, _artRules?.RulesHash ?? "",
+                    profile, rubric, composed.Shots, composed.Width, composed.Height));
             }
             if (request.Command == "art.rules")
             {
@@ -260,6 +298,31 @@ public sealed class AgentRuntime : IAsyncDisposable
     private sealed class SchemaArguments { public string? Command { get; set; } }
     private sealed class AlbumArguments { public string? TypeName { get; set; } }
     private sealed class FootprintGetArguments { public string? TypeName { get; set; } }
+    private sealed class ReviewArguments
+    {
+        public int? RequiredRevision { get; set; }
+        public string? PreparedPlanId { get; set; }
+        public string? PlanHash { get; set; }
+        public int LocalCells { get; set; } = 64;
+        public int SampleTarget { get; set; } = 30000;
+    }
+
+    /// <summary>
+    /// Four local shots at fixed fractions of the playable area.
+    /// <para>
+    /// Deliberately not centred on player starts: comparing a work in progress against a shipped
+    /// map only works when both are cropped at the same offsets, so the offsets cannot depend on
+    /// where this particular map happens to put its bases.
+    /// </para>
+    /// </summary>
+    private static List<(string Label, double GridX, double GridY)> LocalShots(MapArtProfile profile) =>
+        new()
+        {
+            ("NW quarter", profile.Width * 0.25, profile.Height * 0.25),
+            ("NE quarter", profile.Width * 0.75, profile.Height * 0.25),
+            ("SW quarter", profile.Width * 0.25, profile.Height * 0.75),
+            ("SE quarter", profile.Width * 0.75, profile.Height * 0.75)
+        };
     private sealed class FootprintSetArguments
     {
         public string? TypeName { get; set; }

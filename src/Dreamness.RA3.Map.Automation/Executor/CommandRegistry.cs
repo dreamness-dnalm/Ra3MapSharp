@@ -58,6 +58,7 @@ public sealed class CommandRegistry
         registry.Register(new RebuildPassabilityHandler());
         registry.Register(new SculptTerrainHandler());
         registry.Register(new SmoothTerrainHandler());
+        registry.Register(new Commands.Art.ArtProfileHandler(catalog));
         registry.Register(new QueryTexturesHandler());
         registry.Register(new PaintTextureHandler());
         registry.Register(new PlaceWaypointHandler());
