@@ -81,7 +81,7 @@ args = [
   "N:\\workspace\\ra3\\Ra3MapSharp\\src\\Dreamness.RA3.Map.Agent\\bin\\Debug\\net6.0\\Dreamness.RA3.Map.Agent.dll",
   "--mcp",
   "--launcher", "N:\\Program Files (x86)\\Red Alert 3(Incomplete)\\CoronaLauncher\\CoronaResources\\NewWorldBuilder\\WbLauncher.exe",
-  "--artifacts", "N:\\workspace\\ra3\\Ra3MapSharp\\artifacts\\mcp-agent"
+  "--artifacts", "N:\\workspace\\ra3\\Ra3MapSharp\\artifacts"
 ]
 ```
 
@@ -93,3 +93,31 @@ codex mcp list      # 应出现 ra3-map 一行，Command=dotnet，Args 含 --mcp
 ```
 
 配置指向 `bin/Debug` 产物；重新构建后路径不变，无需改配置。若改用 Release 或 `dotnet publish` 输出，请同步更新三处配置。
+## 5. 让素材与规则可用（一次性构建）
+
+`assets.*` / `footprints.*` / `art.*` 依赖四份**生成数据**。它们不在仓库里，需要先构建一次（约 20 分钟，之后长期可用），**并保证客户端的 `--artifacts` 指向同一层**。
+
+```powershell
+$dll = "src\Dreamness.RA3.Map.Agent\bin\Debug\net6.0\Dreamness.RA3.Map.Agent.dll"
+$launcher = "N:\Program Files (x86)\Red Alert 3(Incomplete)\CoronaLauncher\CoronaResources\NewWorldBuilder\WbLauncher.exe"
+$cat = "N:\Program Files (x86)\Red Alert 3(Incomplete)\CoronaLauncher\CoronaResources\NewWorldBuilder\data\config\ObjectCategory.json"
+$tr  = "N:\Program Files (x86)\Red Alert 3(Incomplete)\CoronaLauncher\CoronaResources\NewWorldBuilder\data\config\ObjWndTrans.json"
+
+dotnet $dll --build-catalog artifacts\catalog\catalog.json --launcher $launcher --artifacts artifacts
+dotnet $dll --build-album artifacts\album --asset-catalog artifacts\catalog\catalog.json --artifacts artifacts\album-work --launcher $launcher
+dotnet $dll --build-footprints artifacts\footprints\footprints.json --artifacts artifacts
+dotnet $dll --analyze-corpus artifacts\art-rules\art-rules.json --corpus "E:\ai_workspace\ra3_map_diffusion\dataset\origin_maps" --object-catalog $cat --object-translations $tr --artifacts artifacts
+```
+
+**验收**（任一条不符，先检查 `--artifacts` 是否与构建时一致）：
+
+| 工具 | 期望 |
+| --- | --- |
+| `assets.catalog_info` | `counts.textures` 406、`counts.objects` 1688 |
+| `art.rules` | `maps` 63、`rules` 数十条 |
+| `footprints.list {limit:1}` | `total` 约 970 |
+| `assets.search {kind:"texture",theme:"Yucatan"}` | `total` 45 |
+| `assets.album {typeName:"AM_PLANTS01"}` | 返回 `image/png` 内容块 |
+
+已知缺口：`footprints` 只覆盖 **1200/1688** 个物体（有编辑器截图的那 482 个未量测），所以 `footprints.get CC_Bush01` 会返回 `FOOTPRINT_MISSING`——这是数据缺口，不是接线故障。
+
