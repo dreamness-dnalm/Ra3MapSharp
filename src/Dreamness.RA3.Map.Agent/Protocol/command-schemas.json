@@ -1012,6 +1012,15 @@
       "additionalProperties": false
     }
   },
+  "art.rules": {
+    "description": "Report art-direction statistics measured from shipped maps: material counts and shares, blend share, prop density, clumping, category mix, and the rules derived from them.",
+    "argumentsSchema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    }
+  },
   "assets.album": {
     "description": "Return the agent-rendered appearance image for an object the editor ships no screenshot for.",
     "argumentsSchema": {

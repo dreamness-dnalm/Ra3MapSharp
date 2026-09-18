@@ -72,6 +72,17 @@ public static class TextureSemantics
         }).ToArray();
     }
 
+    /// <summary>Labels one name, without the cross-name theme normalisation of DescribeAll.</summary>
+    public static TextureAsset Describe(string name)
+    {
+        var (surface, theme, variant, kind) = Split(name);
+        return new TextureAsset(name, surface, theme, variant, kind,
+            kind is KindTransition, kind is KindStructure);
+    }
+
+    /// <summary>True for the blend/material-transition materials.</summary>
+    public static bool IsTransition(string name) => Split(name).Kind == KindTransition;
+
     internal static (string Surface, string Theme, int? Variant, string Kind) Split(string name)
     {
         var match = Pattern.Match(name);

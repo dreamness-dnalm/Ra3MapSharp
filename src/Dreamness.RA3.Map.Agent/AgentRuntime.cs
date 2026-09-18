@@ -16,6 +16,7 @@ public sealed class AgentRuntime : IAsyncDisposable
     private readonly ObjectCatalog? _catalog;
     private readonly AssetCatalog? _assets;
     private readonly FootprintCatalog? _footprints;
+    private readonly ArtRules? _artRules;
     private readonly string? _footprintOverridesPath;
     private readonly CommandExecutor _executor;
     private readonly WorldBuilderRenderer? _renderer;
@@ -28,13 +29,14 @@ public sealed class AgentRuntime : IAsyncDisposable
 
     public AgentRuntime(WorldBuilderRenderer? renderer = null, ObjectCatalog? catalog = null,
         string? diagnosticsRoot = null, AssetCatalog? assets = null,
-        FootprintCatalog? footprints = null, string? footprintOverridesPath = null)
+        FootprintCatalog? footprints = null, string? footprintOverridesPath = null, ArtRules? artRules = null)
     {
         _diagnosticsRoot = diagnosticsRoot ?? Path.Combine(Environment.CurrentDirectory, "artifacts", "agent-diagnostics");
         _catalog = catalog;
         _assets = assets;
         _footprints = footprints;
         _footprintOverridesPath = footprintOverridesPath;
+        _artRules = artRules;
         _registry = CommandRegistry.CreateDefault(catalog, footprints);
         _renderer = renderer;
         _executor = new CommandExecutor(_registry);
@@ -54,8 +56,10 @@ public sealed class AgentRuntime : IAsyncDisposable
                 return Success(request, new
                 {
                     protocol = "ra3-agent-jsonl-v1", transports = new[] { "jsonl", "mcp-stdio-2025-06-18" }, commands = _registry.Describe(),
-                    hostCommands = new[] { "system.capabilities", "system.schema", "assets.objects", "assets.catalog_info", "assets.search", "assets.album", "footprints.get", "footprints.list", "footprints.set", "map.inspect_file", "map.close", "preview.start", "preview.inspect", "diagnostics.render", "jobs.status", "jobs.cancel" },
+                    hostCommands = new[] { "system.capabilities", "system.schema", "assets.objects", "assets.catalog_info", "assets.search", "assets.album", "art.rules", "footprints.get", "footprints.list", "footprints.set", "map.inspect_file", "map.close", "preview.start", "preview.inspect", "diagnostics.render", "jobs.status", "jobs.cancel" },
                     objectCatalog = _catalog == null ? null : new { _catalog.SourcePath, _catalog.ContentHash, _catalog.Count, _catalog.Sources },
+                    artRules = _artRules == null ? null : new { _artRules.RulesHash, maps = _artRules.Maps.Count,
+                        _artRules.BuiltAtUtc, _artRules.CorpusPath },
                     footprints = _footprints == null ? null : new
                     {
                         _footprints.CatalogHash, measured = _footprints.Entries.Count,
@@ -95,6 +99,12 @@ public sealed class AgentRuntime : IAsyncDisposable
             {
                 if (_assets == null) throw MissingCatalog();
                 return Success(request, _assets.Search(Arguments<AssetSearchQuery>(request)));
+            }
+            if (request.Command == "art.rules")
+            {
+                if (_artRules == null) throw new AutomationException("RULES_UNAVAILABLE",
+                    "未加载美术规则。用 --analyze-corpus 生成后宿主会自动加载，或用 --art-rules 指定。");
+                return Success(request, _artRules.Info());
             }
             if (request.Command is "footprints.get" or "footprints.list" or "footprints.set")
             {

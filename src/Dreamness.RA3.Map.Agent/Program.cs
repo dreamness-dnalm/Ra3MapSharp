@@ -20,6 +20,11 @@ string? albumCatalogPath = null;
 string? buildFootprintsPath = null;
 string? footprintsCatalogPath = null;
 var footprintThreshold = 12;
+string? analyzeCorpusPath = null;
+string? corpusPath = null;
+int? corpusLimit = null;
+var corpusSample = 30000;
+string? artRulesPath = null;
 int? albumLimit = null;
 var albumOptions = new AlbumBuildCommand.Options();
 var albumAll = false;
@@ -50,6 +55,11 @@ for (var i = 0; i < args.Length; i++)
         case "--build-footprints": buildFootprintsPath = args[++i]; break;
         case "--footprints": footprintsCatalogPath = args[++i]; break;
         case "--footprint-threshold": footprintThreshold = int.Parse(args[++i], System.Globalization.CultureInfo.InvariantCulture); break;
+        case "--analyze-corpus": analyzeCorpusPath = args[++i]; break;
+        case "--corpus": corpusPath = args[++i]; break;
+        case "--corpus-limit": corpusLimit = int.Parse(args[++i], System.Globalization.CultureInfo.InvariantCulture); break;
+        case "--corpus-sample": corpusSample = int.Parse(args[++i], System.Globalization.CultureInfo.InvariantCulture); break;
+        case "--art-rules": artRulesPath = args[++i]; break;
         case "--album-all": albumAll = true; break;
         case "--album-limit": albumLimit = int.Parse(args[++i], System.Globalization.CultureInfo.InvariantCulture); break;
         case "--album-grid": albumOptions.Grid = int.Parse(args[++i], System.Globalization.CultureInfo.InvariantCulture); break;
@@ -116,6 +126,14 @@ try
 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or AutomationException or InvalidOperationException)
 { Console.Error.WriteLine("Cannot load album: " + ex.Message); return 2; }
 
+if (analyzeCorpusPath != null)
+{
+    if (corpusPath == null) { Console.Error.WriteLine("--analyze-corpus needs --corpus <directory>."); return 2; }
+    try { return await CorpusAnalysisCommand.RunAsync(corpusPath, analyzeCorpusPath, catalog, corpusSample, corpusLimit, CancellationToken.None); }
+    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or AutomationException or InvalidOperationException or ArgumentException)
+    { Console.Error.WriteLine("Cannot analyze corpus: " + ex.Message); return 2; }
+}
+
 if (buildFootprintsPath != null)
 {
     if (album == null) { Console.Error.WriteLine("--build-footprints needs an album; run --build-album first."); return 2; }
@@ -154,10 +172,20 @@ try
 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or AutomationException or InvalidOperationException)
 { Console.Error.WriteLine("Cannot load footprints: " + ex.Message); return 2; }
 
+Dreamness.RA3.Map.Automation.Catalog.ArtRules? artRules = null;
+try
+{
+    var rulesPath = artRulesPath ?? Dreamness.RA3.Map.Automation.Catalog.ArtRules.DefaultPath(artifacts);
+    if (File.Exists(rulesPath)) artRules = Dreamness.RA3.Map.Automation.Catalog.ArtRules.Load(rulesPath);
+    else if (artRulesPath != null) { Console.Error.WriteLine("Art rules not found: " + rulesPath); return 2; }
+}
+catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or AutomationException or InvalidOperationException)
+{ Console.Error.WriteLine("Cannot load art rules: " + ex.Message); return 2; }
+
 await using var runtime = new AgentRuntime(
     launcher == null ? null : new WorldBuilderRenderer(launcher, artifacts), catalog,
     Path.Combine(artifacts, "diagnostics"), assets, footprints,
-    Dreamness.RA3.Map.Automation.Catalog.FootprintCatalog.DefaultOverridesPath(artifacts));
+    Dreamness.RA3.Map.Automation.Catalog.FootprintCatalog.DefaultOverridesPath(artifacts), artRules);
 if (mcp)
 {
     if (requests != null) { Console.Error.WriteLine("--mcp cannot be combined with --requests."); return 2; }

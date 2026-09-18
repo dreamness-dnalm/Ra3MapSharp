@@ -8,6 +8,11 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+      <_Parameter1>Dreamness.RA3.Map.Agent.Test</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+  <ItemGroup>
     <EmbeddedResource Include="Protocol/command-schemas.json" />
     <ProjectReference Include="../Dreamness.RA3.Map.Automation/Dreamness.RA3.Map.Automation.csproj" />
     <ProjectReference Include="../Dreamness.Ra3.Map.Visualization/Dreamness.Ra3.Map.Visualization.csproj" />
