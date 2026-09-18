@@ -101,7 +101,7 @@ public sealed class ArtRules
 public sealed record ArtRuleMap(string Name, int Width, int Height, long Cells, int SampledCells,
     int DistinctTextures, double TopTextureShare, double TopThreeShare, double TransitionShare,
     double BlendedShare, int Objects, double ObjectsPer1000Cells, double ClumpingIndex,
-    SortedDictionary<string, int> Categories, List<ArtRulePair> Pairs);
+    SortedDictionary<string, int> Categories, List<ArtRulePair> Pairs, MapPatchStats Patches);
 
 public sealed record ArtRuleDistribution(string Key, double Min, double P25, double Median, double P75, double Max);
 

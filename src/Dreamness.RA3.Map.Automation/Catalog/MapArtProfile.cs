@@ -4,6 +4,16 @@ using Dreamness.Ra3.Map.Facade.Core;
 namespace Dreamness.RA3.Map.Automation.Catalog;
 
 /// <summary>
+/// How the primary materials are laid out, as opposed to how much of each there is.
+/// <para>
+/// Aggregate counts cannot tell a map of coherent regions from one covered in stamps:
+/// both can hit the same material counts and shares. These measure the shape of the regions.
+/// </para>
+/// </summary>
+public sealed record MapPatchStats(int Patches, double MedianPatchCells, double LargestPatchShare,
+    double PatchCountPer1000Cells, double MeanPatchCells, double MeanCompactness);
+
+/// <summary>
 /// The art-direction measurements for one map.
 /// <para>
 /// The same code measures a shipped corpus map and a work in progress on purpose: a review is
@@ -14,13 +24,11 @@ namespace Dreamness.RA3.Map.Automation.Catalog;
 public sealed record MapArtProfile(int Width, int Height, long Cells, int SampledCells,
     int DistinctTextures, double TopTextureShare, double TopThreeShare, double TransitionShare,
     double BlendedShare, int Objects, double ObjectsPer1000Cells, double ClumpingIndex,
-    SortedDictionary<string, int> Categories, List<ArtRulePair> Pairs)
+    SortedDictionary<string, int> Categories, List<ArtRulePair> Pairs, MapPatchStats Patches)
 {
     private const int QuadratCells = 8;
 
-    /// <summary>
-    /// Samples the map on a stride so a 1000x1000 map costs about as much as a 64x64 one.
-    /// </summary>
+    /// <summary>Samples the map on a stride so a 1000x1000 map costs about as much as a 64x64 one.</summary>
     public static MapArtProfile Measure(Ra3MapFacade map, IReadOnlyDictionary<string, string>? categoryLookup,
         int sampleTarget, CancellationToken token)
     {
@@ -75,7 +83,8 @@ public sealed record MapArtProfile(int Width, int Height, long Cells, int Sample
             MeasureClumping(positions, width, height),
             categories,
             pairCounts.OrderByDescending(pair => pair.Value).Take(40)
-                .Select(pair => new ArtRulePair(pair.Key.Primary, pair.Key.Secondary, 1, pair.Value)).ToList());
+                .Select(pair => new ArtRulePair(pair.Key.Primary, pair.Key.Secondary, 1, pair.Value)).ToList(),
+            MeasurePatches(map, token));
     }
 
     /// <summary>
@@ -99,6 +108,97 @@ public sealed record MapArtProfile(int Width, int Height, long Cells, int Sample
         if (mean <= 0) return 0;
         var variance = counts.Sum(count => (count - mean) * (count - mean)) / counts.Length;
         return variance / mean;
+    }
+
+    /// <summary>
+    /// Labels the connected regions of equal primary texture and summarises their shape.
+    /// <para>
+    /// Full resolution on purpose: a stride destroys adjacency, and adjacency is the whole point.
+    /// Compactness is perimeter squared over area, which is about 4*pi for a disc and rises as a
+    /// region gets ragged — a map stamped with discs is conspicuous because its regions are
+    /// maximally compact.
+    /// </para>
+    /// </summary>
+    public static MapPatchStats MeasurePatches(Ra3MapFacade map, CancellationToken token)
+    {
+        var width = map.MapPlayableWidth;
+        var height = map.MapPlayableHeight;
+        if (width <= 0 || height <= 0) return new MapPatchStats(0, 0, 0, 0, 0, 0);
+
+        var ids = new int[width * height];
+        var labels = new int[width * height];
+        var textureIds = new Dictionary<string, int>(StringComparer.Ordinal);
+        for (var y = 0; y < height; y++)
+        {
+            for (var x = 0; x < width; x++)
+            {
+                token.ThrowIfCancellationRequested();
+                var name = map.GetTileTexture(x, y);
+                if (!textureIds.TryGetValue(name, out var id)) textureIds[name] = id = textureIds.Count + 1;
+                ids[y * width + x] = id;
+                labels[y * width + x] = -1;
+            }
+        }
+
+        var areas = new List<int>();
+        var perimeters = new List<int>();
+        var componentTexture = new List<int>();
+        var queue = new Queue<int>();
+        for (var start = 0; start < ids.Length; start++)
+        {
+            if (labels[start] >= 0) continue;
+            var id = ids[start];
+            labels[start] = 1;
+            queue.Enqueue(start);
+            int area = 0, perimeter = 0;
+            while (queue.Count > 0)
+            {
+                var index = queue.Dequeue();
+                area++;
+                var x = index % width;
+                var y = index / width;
+                if (x == 0 || ids[index - 1] != id) perimeter++; else Visit(index - 1, id, labels, ids, queue);
+                if (x == width - 1 || ids[index + 1] != id) perimeter++; else Visit(index + 1, id, labels, ids, queue);
+                if (y == 0 || ids[index - width] != id) perimeter++; else Visit(index - width, id, labels, ids, queue);
+                if (y == height - 1 || ids[index + width] != id) perimeter++; else Visit(index + width, id, labels, ids, queue);
+            }
+            areas.Add(area);
+            perimeters.Add(perimeter);
+            componentTexture.Add(id);
+        }
+
+        var cells = (double)Math.Max(1, width * height);
+        var byTexture = new Dictionary<int, (int Total, int Largest)>();
+        for (var index = 0; index < areas.Count; index++)
+        {
+            var id = componentTexture[index];
+            var running = byTexture.TryGetValue(id, out var seen) ? seen : (Total: 0, Largest: 0);
+            byTexture[id] = (running.Total + areas[index], Math.Max(running.Largest, areas[index]));
+        }
+        var largestShare = 0d;
+        foreach (var entry in byTexture.Values)
+            largestShare += entry.Largest / (double)entry.Total * (entry.Total / cells);
+
+        var sizes = areas.OrderBy(area => area).ToArray();
+        var totalCells = Math.Max(1, areas.Sum());
+        var weightedCompactness = 0d;
+        for (var index = 0; index < areas.Count; index++)
+            weightedCompactness += perimeters[index] * (double)perimeters[index] / areas[index] * areas[index];
+        weightedCompactness /= totalCells;
+
+        return new MapPatchStats(areas.Count,
+            sizes.Length == 0 ? 0 : sizes[sizes.Length / 2],
+            Math.Round(largestShare, 4),
+            Math.Round(areas.Count * 1000.0 / cells, 3),
+            sizes.Length == 0 ? 0 : Math.Round(sizes.Average(), 2),
+            Math.Round(weightedCompactness, 2));
+    }
+
+    private static void Visit(int index, int id, int[] labels, int[] ids, Queue<int> queue)
+    {
+        if (labels[index] >= 0 || ids[index] != id) return;
+        labels[index] = 1;
+        queue.Enqueue(index);
     }
 }
 
@@ -139,12 +239,11 @@ public static class ArtRubric
         string Source(string key) => rules != null && rules.Distributions.ContainsKey(key)
             ? $"语料实测 P25–P75（{rules.Maps.Count} 张 shipped 地图）" : "未加载美术规则，无法比对";
 
-        // Material variety and dominance are the two halves of "do not paint it in one colour".
         var varietyFloor = Threshold("distinctTextures", 0.25);
         checks.Add(Judge("materialVariety", profile.DistinctTextures,
             varietyFloor, varietyFloor * 0.4,
             $"至少 {varietyFloor:0} 种（语料 P25）", Source("distinctTextures"),
-            "地形材质种类")) ;
+            "地形材质种类"));
 
         var dominantCeiling = Threshold("topTextureShare", 0.75);
         checks.Add(new ArtRubricCheck("dominantMaterialShare",
@@ -179,6 +278,25 @@ public static class ArtRubric
             $"至少 {clumpFloor:0.##}（语料 P25；约 1 为随机，小于 1 为规则排布）", Source("clumpingIndex"),
             "聚簇程度；规则网格散布会明显低于 1"));
 
+        var cohesionFloor = Threshold("largestPatchShare", 0.25);
+        checks.Add(Judge("materialCohesion", profile.Patches.LargestPatchShare,
+            cohesionFloor, cohesionFloor * 0.5,
+            $"至少 {cohesionFloor:P0}（语料 P25）", Source("largestPatchShare"),
+            "最大连通块占该材质面积的比例。注意：实测 shipped 地图本身就偏碎"
+                + "（斑块中位仅 4 格），所以这条只拦住「材质被撒得极碎」的极端情况，拦不住圆形印章式拼贴"));
+
+        // Measured against the corpus this is the check that sees a stamped map: shipped
+        // boundaries are ragged (median 560, P25 320), while material stamped as discs lands
+        // near the theoretical disc value. The first two shape metrics I tried did not
+        // discriminate at all — shipped maps are more fragmented than assumed, so a patch-size
+        // or largest-patch check passed a map covered in circles. Only the check enforces a
+        // floor; an implausibly ragged map would pass it.
+        var naturalnessFloor = Threshold("meanCompactness", 0.25);
+        checks.Add(Judge("patchNaturalness", profile.Patches.MeanCompactness,
+            naturalnessFloor, naturalnessFloor * 0.6,
+            $"至少 {naturalnessFloor:0}（语料 P25；正圆约 12.6，越低越像规整印章）", Source("meanCompactness"),
+            "斑块紧凑度（周长^2/面积）；这条才抓得住圆形印章式拼贴"));
+
         var landmarkKinds = LandmarkCategories.Count(category =>
             profile.Categories.TryGetValue(category, out var count) && count >= 3);
         checks.Add(new ArtRubricCheck("landmarkPresence", landmarkKinds >= 3 ? Pass : landmarkKinds == 2 ? Warn : Fail,
@@ -208,7 +326,7 @@ public static class ArtRubric
 
 internal static class ArtRuleDistributionExtensions
 {
-    /// <summary>Reads a quantile from a measured distribution, interpolating between the recorded points.</summary>
+    /// <summary>Reads a quantile from a measured distribution, interpolating between recorded points.</summary>
     public static double Get(this ArtRuleDistribution distribution, double fraction) => fraction switch
     {
         <= 0.25 => distribution.P25,

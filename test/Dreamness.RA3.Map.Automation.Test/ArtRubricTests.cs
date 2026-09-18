@@ -13,7 +13,8 @@ public class ArtRubricTests
         var rules = new ArtRules { BuiltAtUtc = DateTimeOffset.UnixEpoch, CorpusPath = "/corpus" };
         for (var index = 0; index < 63; index++)
             rules.Maps.Add(new ArtRuleMap("m" + index, 256, 256, 65536, 30000, 30, 0.28, 0.56, 0.02, 0.19,
-                800, 12.0, 3.0, new SortedDictionary<string, int>(StringComparer.Ordinal), new List<ArtRulePair>()));
+                800, 12.0, 3.0, new SortedDictionary<string, int>(StringComparer.Ordinal), new List<ArtRulePair>(),
+                new MapPatchStats(40, 900, 0.85, 0.6, 1200, 14)));
         void Distribution(string key, double p25, double median, double p75) =>
             rules.Distributions[key] = new ArtRuleDistribution(key, p25 * 0.5, p25, median, p75, p75 * 1.5);
         Distribution("distinctTextures", 21, 30, 37);
@@ -21,18 +22,21 @@ public class ArtRubricTests
         Distribution("blendedShare", 0.12, 0.19, 0.24);
         Distribution("objectsPer1000Cells", 9.27, 12.01, 14.82);
         Distribution("clumpingIndex", 2.39, 2.99, 3.81);
+        Distribution("largestPatchShare", 0.72, 0.85, 0.93);
+        Distribution("meanCompactness", 320, 560, 960);
         rules.RulesHash = rules.ComputeHash();
         return rules;
     }
 
     private static MapArtProfile Profile(int textures = 30, double top = 0.28, double blended = 0.19,
-        double density = 12, double clumping = 3.0, int landmarkKinds = 4)
+        double density = 12, double clumping = 3.0, int landmarkKinds = 4, double cohesion = 0.85,
+        double compactness = 560)
     {
         var categories = new SortedDictionary<string, int>(StringComparer.Ordinal) { ["树草"] = 500 };
         foreach (var name in new[] { "雕像和石柱", "阵营特殊建筑", "浮岛要塞装饰", "特殊地形" }.Take(landmarkKinds))
             categories[name] = 5;
         return new MapArtProfile(256, 256, 65536, 30000, textures, top, 0.56, 0.02, blended, 800, density,
-            clumping, categories, new List<ArtRulePair>());
+            clumping, categories, new List<ArtRulePair>(), new MapPatchStats(40, 900, cohesion, 0.6, 1200, compactness));
     }
 
     private static string Verdict(ArtRubricResult result, string id) =>
@@ -62,6 +66,28 @@ public class ArtRubricTests
         // A min-distance scatter lands below 1; the corpus says good maps sit near 3.
         var result = ArtRubric.Evaluate(Profile(clumping: 0.92), Rules());
         Assert.That(Verdict(result, "clumping"), Is.EqualTo(ArtRubric.Fail));
+    }
+
+    [Test]
+    public void ScatteredMaterialStampsFailTheCohesionRule()
+    {
+        // A map covered in same-sized stamps can match every amount in the corpus and still be
+        // nothing like one; this is the check that sees the difference.
+        var result = ArtRubric.Evaluate(Profile(cohesion: 0.18), Rules());
+        Assert.That(Verdict(result, "materialCohesion"), Is.EqualTo(ArtRubric.Fail));
+        Assert.That(result.Verdict, Is.EqualTo("needs-iteration"));
+    }
+
+    [Test]
+    public void DiscStampedMaterialFailsNaturalnessWhilePassingEveryAmount()
+    {
+        // The measured demo map: every amount in the corpus range, materials stamped as discs.
+        // Patch size and largest-patch share both passed it; compactness is what caught it.
+        var result = ArtRubric.Evaluate(Profile(compactness: 158.73), Rules());
+        Assert.That(Verdict(result, "patchNaturalness"), Is.EqualTo(ArtRubric.Fail));
+        Assert.That(Verdict(result, "materialCohesion"), Is.EqualTo(ArtRubric.Pass),
+            "the size-based shape check does not see this failure mode");
+        Assert.That(result.Verdict, Is.EqualTo("needs-iteration"));
     }
 
     [Test]

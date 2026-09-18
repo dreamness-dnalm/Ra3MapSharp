@@ -86,7 +86,7 @@ internal static class CorpusAnalysisCommand
         return new ArtRuleMap(file.Name, profile.Width, profile.Height, profile.Cells, profile.SampledCells,
             profile.DistinctTextures, profile.TopTextureShare, profile.TopThreeShare, profile.TransitionShare,
             profile.BlendedShare, profile.Objects, profile.ObjectsPer1000Cells, profile.ClumpingIndex,
-            profile.Categories, profile.Pairs);
+            profile.Categories, profile.Pairs, profile.Patches);
     }
 
     private static void Aggregate(ArtRules rules)
@@ -109,6 +109,11 @@ internal static class CorpusAnalysisCommand
         Distribution("blendedShare", m => m.BlendedShare);
         Distribution("objectsPer1000Cells", m => m.ObjectsPer1000Cells);
         Distribution("clumpingIndex", m => m.ClumpingIndex, positiveOnly: true);
+        // Shape, not amount: what separates coherent regions from same-sized stamps.
+        Distribution("medianPatchCells", m => m.Patches.MedianPatchCells, positiveOnly: true);
+        Distribution("largestPatchShare", m => m.Patches.LargestPatchShare, positiveOnly: true);
+        Distribution("patchCountPer1000Cells", m => m.Patches.PatchCountPer1000Cells, positiveOnly: true);
+        Distribution("meanCompactness", m => m.Patches.MeanCompactness, positiveOnly: true);
 
         // A pair is interesting when many maps blend those two textures, not when one map does it
         // a lot, so count maps first and samples second.
@@ -167,6 +172,12 @@ internal static class CorpusAnalysisCommand
             + "——真正的过渡手段是两种普通表面材质互相混合（见下一行），不是这个家族。";
         yield return $"物体密度：{Describe("objectsPer1000Cells")}（每千格）——按此推算装饰物数量。";
         yield return $"聚簇指数：{Describe("clumpingIndex")}——明显大于 1，即成群分布；规则网格排布会得到小于 1。";
+        yield return $"材质斑块中位尺寸：{Describe("medianPatchCells")} 格——材质应以大块区域存在，而不是被切成碎片。";
+        yield return $"最大连通块占该材质面积的比例（按面积加权）：{Describe("largestPatchShare")}"
+            + "——接近 1 表示每种材质基本连成一片；偏低说明材质被撒成了零散小片。";
+        yield return $"每千格斑块数：{Describe("patchCountPer1000Cells")}。";
+        yield return $"斑块紧凑度（周长^2/面积，按面积加权）：{Describe("meanCompactness")}"
+            + "——正圆约 12.6，越接近它说明材质越是被圆形/规整形状的印章铺上去的；自然边界会明显更高。";
         var top = rules.CategoryShare.Where(pair => pair.Value >= 0.005)
             .OrderByDescending(pair => pair.Value)
             .Select(pair => $"{pair.Key} {pair.Value:P0}");

@@ -26,7 +26,8 @@ public class ArtRulesTests
         var rules = new ArtRules { BuiltAtUtc = DateTimeOffset.UnixEpoch, CorpusPath = "/corpus", SampleTarget = 30000 };
         rules.Maps.Add(new ArtRuleMap("a.map", 64, 64, 4096, 4096, 3, 0.9, 1.0, 0, 0.1, 5, 1.22, 0,
             new SortedDictionary<string, int>(StringComparer.Ordinal) { ["树草"] = 5 },
-            new List<ArtRulePair> { new("Dirt_Yucatan03", "Grass_Yucatan01", 1, 10) }));
+            new List<ArtRulePair> { new("Dirt_Yucatan03", "Grass_Yucatan01", 1, 10) },
+            new MapPatchStats(8, 512, 0.8, 0.5, 700, 14)));
         rules.Distributions["distinctTextures"] = new ArtRuleDistribution("distinctTextures", 3, 3, 3, 3, 3);
         rules.TexturePairs.Add(new ArtRulePair("Dirt_Yucatan03", "Grass_Yucatan01", 1, 10));
         rules.CategoryShare["树草"] = 1.0;
