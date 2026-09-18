@@ -1168,6 +1168,159 @@
       "additionalProperties": false
     }
   },
+  "texture.paint_by_height": {
+    "description": "Paint each cell by the elevation band it falls in, optionally varying the material per coarse block within a band. Boundaries follow the terrain rather than the brush shape.",
+    "argumentsSchema": {
+      "type": "object",
+      "properties": {
+        "region": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "rectangle"
+                  ],
+                  "default": "rectangle"
+                },
+                "space": {
+                  "type": "string",
+                  "enum": [
+                    "playableGrid",
+                    "mapGrid"
+                  ],
+                  "default": "playableGrid"
+                },
+                "x": {
+                  "type": "integer"
+                },
+                "y": {
+                  "type": "integer"
+                },
+                "width": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "height": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "required": [
+                "x",
+                "y",
+                "width",
+                "height"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "circle"
+                  ]
+                },
+                "space": {
+                  "type": "string",
+                  "enum": [
+                    "playableGrid",
+                    "mapGrid"
+                  ],
+                  "default": "playableGrid"
+                },
+                "centerX": {
+                  "type": "number"
+                },
+                "centerY": {
+                  "type": "number"
+                },
+                "radius": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                }
+              },
+              "required": [
+                "kind",
+                "centerX",
+                "centerY",
+                "radius"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "polygon"
+                  ]
+                },
+                "space": {
+                  "type": "string",
+                  "enum": [
+                    "playableGrid",
+                    "mapGrid"
+                  ],
+                  "default": "playableGrid"
+                },
+                "vertices": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "x": {
+                        "type": "number"
+                      },
+                      "y": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "x",
+                      "y"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "minItems": 3,
+                  "maxItems": 64
+                }
+              },
+              "required": [
+                "kind",
+                "vertices"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "bands": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "items": {
+            "type": "object",
+            "properties": {
+              "maxHeight": { "type": "number" },
+              "texture": { "type": "string" },
+              "textureNames": { "type": "array", "minItems": 1, "maxItems": 8, "items": { "type": "string" } },
+              "variantBlockCells": { "type": "integer", "minimum": 4, "maximum": 256, "default": 24 }
+            },
+            "required": [ "maxHeight" ],
+            "additionalProperties": false
+          }
+        },
+        "autoBlend": { "type": "boolean", "default": true }
+      },
+      "required": [ "region", "bands" ],
+      "additionalProperties": false
+    }
+  },
   "texture.paint": {
     "description": "Paint texture and optionally blend a one-cell halo.",
     "argumentsSchema": {

@@ -61,6 +61,7 @@ public sealed class CommandRegistry
         registry.Register(new Commands.Art.ArtProfileHandler(catalog));
         registry.Register(new QueryTexturesHandler());
         registry.Register(new PaintTextureHandler());
+        registry.Register(new PaintTextureByHeightHandler());
         registry.Register(new PlaceWaypointHandler());
         registry.Register(new MoveWaypointHandler());
         registry.Register(new DeleteWaypointHandler());

@@ -207,7 +207,7 @@ public sealed record ArtRubricCheck(string Id, string Verdict, double? Measured,
     string Source, string Note);
 
 public sealed record ArtRubricResult(string Verdict, int Passed, int Warned, int Failed,
-    int NotEvaluated, string RulesHash, List<ArtRubricCheck> Checks);
+    int NotEvaluated, string RulesHash, List<ArtRubricCheck> Checks, int Descriptive);
 
 /// <summary>
 /// Judges a map against the thresholds measured from shipped maps.
@@ -223,6 +223,13 @@ public static class ArtRubric
     public const string Warn = "warn";
     public const string Fail = "fail";
     public const string NotEvaluated = "not-evaluated";
+
+    /// <summary>
+    /// Measured and reported, deliberately not judged. Used where the number is real but
+    /// whether high or low is better has not been established, so letting it decide the verdict
+    /// would push work in a direction the evidence does not support.
+    /// </summary>
+    public const string Descriptive = "descriptive";
 
     /// <summary>Categories that read as deliberate landmarks rather than filler.</summary>
     private static readonly string[] LandmarkCategories =
@@ -278,12 +285,10 @@ public static class ArtRubric
             $"至少 {clumpFloor:0.##}（语料 P25；约 1 为随机，小于 1 为规则排布）", Source("clumpingIndex"),
             "聚簇程度；规则网格散布会明显低于 1"));
 
-        var cohesionFloor = Threshold("largestPatchShare", 0.25);
-        checks.Add(Judge("materialCohesion", profile.Patches.LargestPatchShare,
-            cohesionFloor, cohesionFloor * 0.5,
-            $"至少 {cohesionFloor:P0}（语料 P25）", Source("largestPatchShare"),
-            "最大连通块占该材质面积的比例。注意：实测 shipped 地图本身就偏碎"
-                + "（斑块中位仅 4 格），所以这条只拦住「材质被撒得极碎」的极端情况，拦不住圆形印章式拼贴"));
+        checks.Add(new ArtRubricCheck("materialCohesion", Descriptive,
+            profile.Patches.LargestPatchShare, "仅报告", Source("largestPatchShare"),
+            "最大连通块占该材质面积的比例。实测 shipped 地图本身就偏碎（斑块中位仅 4 格），"
+                + "且拼贴图落在此指标的语料带内，故只报告不判分"));
 
         // Measured against the corpus this is the check that sees a stamped map: shipped
         // boundaries are ragged (median 560, P25 320), while material stamped as discs lands
@@ -291,11 +296,11 @@ public static class ArtRubric
         // discriminate at all — shipped maps are more fragmented than assumed, so a patch-size
         // or largest-patch check passed a map covered in circles. Only the check enforces a
         // floor; an implausibly ragged map would pass it.
-        var naturalnessFloor = Threshold("meanCompactness", 0.25);
-        checks.Add(Judge("patchNaturalness", profile.Patches.MeanCompactness,
-            naturalnessFloor, naturalnessFloor * 0.6,
-            $"至少 {naturalnessFloor:0}（语料 P25；正圆约 12.6，越低越像规整印章）", Source("meanCompactness"),
-            "斑块紧凑度（周长^2/面积）；这条才抓得住圆形印章式拼贴"));
+        checks.Add(new ArtRubricCheck("patchNaturalness", Descriptive,
+            profile.Patches.MeanCompactness, "仅报告", Source("meanCompactness"),
+            "斑块紧凑度（周长^2/面积，正圆约 12.6）。**不再判分**：实测跟着地形等高线走的图得 34，"
+                + "比圆形印章图的 159 还低，说明它度量的是边界锯齿度（接近逐格噪声），不是构成质量；"
+                + "拿它当判据会给「往图上加噪声」正向激励"));
 
         var landmarkKinds = LandmarkCategories.Count(category =>
             profile.Categories.TryGetValue(category, out var count) && count >= 3);
@@ -312,8 +317,10 @@ public static class ArtRubric
         var warned = checks.Count(c => c.Verdict == Warn);
         var passed = checks.Count(c => c.Verdict == Pass);
         var notEvaluated = checks.Count(c => c.Verdict == NotEvaluated);
+        // Descriptive checks carry a measurement but no direction, so they never decide.
+        var descriptive = checks.Count(c => c.Verdict == Descriptive);
         return new ArtRubricResult(failed > 0 ? "needs-iteration" : warned > 0 ? "acceptable" : "pass",
-            passed, warned, failed, notEvaluated, rules?.RulesHash ?? "", checks);
+            passed, warned, failed, notEvaluated, rules?.RulesHash ?? "", checks, descriptive);
     }
 
     private static ArtRubricCheck Judge(string id, double measured, double? floor, double? hardFloor,

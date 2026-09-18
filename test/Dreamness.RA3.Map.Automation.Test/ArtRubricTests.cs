@@ -69,25 +69,20 @@ public class ArtRubricTests
     }
 
     [Test]
-    public void ScatteredMaterialStampsFailTheCohesionRule()
+    public void ShapeIsMeasuredButDoesNotDecideTheVerdict()
     {
-        // A map covered in same-sized stamps can match every amount in the corpus and still be
-        // nothing like one; this is the check that sees the difference.
-        var result = ArtRubric.Evaluate(Profile(cohesion: 0.18), Rules());
-        Assert.That(Verdict(result, "materialCohesion"), Is.EqualTo(ArtRubric.Fail));
-        Assert.That(result.Verdict, Is.EqualTo("needs-iteration"));
-    }
-
-    [Test]
-    public void DiscStampedMaterialFailsNaturalnessWhilePassingEveryAmount()
-    {
-        // The measured demo map: every amount in the corpus range, materials stamped as discs.
-        // Patch size and largest-patch share both passed it; compactness is what caught it.
-        var result = ArtRubric.Evaluate(Profile(compactness: 158.73), Rules());
-        Assert.That(Verdict(result, "patchNaturalness"), Is.EqualTo(ArtRubric.Fail));
-        Assert.That(Verdict(result, "materialCohesion"), Is.EqualTo(ArtRubric.Pass),
-            "the size-based shape check does not see this failure mode");
-        Assert.That(result.Verdict, Is.EqualTo("needs-iteration"));
+        // Both shape metrics failed to validate against the data: shipped maps are far more
+        // fragmented than assumed (median patch 4 cells), and a map whose materials follow the
+        // terrain contours scored 34 where a map stamped with discs scored 159. Compactness is
+        // therefore measuring boundary ragginess rather than composition, and a check that
+        // rewards adding noise is worse than no check. They stay visible as measurements.
+        var stamped = ArtRubric.Evaluate(Profile(cohesion: 0.18, compactness: 158.73), Rules());
+        Assert.That(Verdict(stamped, "materialCohesion"), Is.EqualTo(ArtRubric.Descriptive));
+        Assert.That(Verdict(stamped, "patchNaturalness"), Is.EqualTo(ArtRubric.Descriptive));
+        Assert.That(stamped.Descriptive, Is.EqualTo(2));
+        Assert.That(stamped.Verdict, Is.EqualTo("pass"), "no amount is out of range, and shape does not decide");
+        Assert.That(stamped.Checks.Single(c => c.Id == "patchNaturalness").Measured, Is.EqualTo(158.73),
+            "the number is still reported so a human can look at it");
     }
 
     [Test]
@@ -114,8 +109,9 @@ public class ArtRubricTests
     {
         var result = ArtRubric.Evaluate(Profile(top: 0.95, clumping: 0.2), null);
         Assert.That(result.Verdict, Is.EqualTo("pass"), "no thresholds means no failures, not invented ones");
-        Assert.That(result.NotEvaluated, Is.EqualTo(result.Checks.Count - 1),
-            "every threshold-driven check is reported as unevaluated except the roadmap landmark rule");
+        Assert.That(result.NotEvaluated + result.Descriptive, Is.EqualTo(result.Checks.Count - 1),
+            "without thresholds everything is either unevaluated or descriptive, except the roadmap landmark rule");
+        Assert.That(result.Descriptive, Is.EqualTo(2), "the two shape checks are descriptive regardless of rules");
         Assert.That(Verdict(result, "dominantMaterialShare"), Is.EqualTo(ArtRubric.NotEvaluated));
         Assert.That(result.Checks.All(check => check.Source.Length > 0), Is.True,
             "each check names where its threshold came from");
@@ -128,7 +124,7 @@ public class ArtRubricTests
         Assert.That(result.Checks, Is.Not.Empty);
         Assert.That(result.Checks.All(check => !string.IsNullOrWhiteSpace(check.Note)), Is.True);
         Assert.That(result.Checks.All(check => !string.IsNullOrWhiteSpace(check.Threshold)), Is.True);
-        Assert.That(result.Passed + result.Warned + result.Failed + result.NotEvaluated,
+        Assert.That(result.Passed + result.Warned + result.Failed + result.NotEvaluated + result.Descriptive,
             Is.EqualTo(result.Checks.Count));
     }
 }
