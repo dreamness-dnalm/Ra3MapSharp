@@ -15,6 +15,11 @@ string? translationsPath = null;
 string? assetCatalogPath = null;
 string? buildCatalogPath = null;
 string? screenshotsDirectory = null;
+string? buildAlbumPath = null;
+string? albumCatalogPath = null;
+int? albumLimit = null;
+var albumOptions = new AlbumBuildCommand.Options();
+var albumAll = false;
 bool mcp = false;
 for (var i = 0; i < args.Length; i++)
 {
@@ -37,6 +42,14 @@ for (var i = 0; i < args.Length; i++)
         case "--asset-catalog": assetCatalogPath = args[++i]; break;
         case "--build-catalog": buildCatalogPath = args[++i]; break;
         case "--screenshots": screenshotsDirectory = args[++i]; break;
+        case "--build-album": buildAlbumPath = args[++i]; break;
+        case "--album": albumCatalogPath = args[++i]; break;
+        case "--album-all": albumAll = true; break;
+        case "--album-limit": albumLimit = int.Parse(args[++i], System.Globalization.CultureInfo.InvariantCulture); break;
+        case "--album-grid": albumOptions.Grid = int.Parse(args[++i], System.Globalization.CultureInfo.InvariantCulture); break;
+        case "--album-spacing": albumOptions.Spacing = int.Parse(args[++i], System.Globalization.CultureInfo.InvariantCulture); break;
+        case "--album-tile": albumOptions.TileCells = int.Parse(args[++i], System.Globalization.CultureInfo.InvariantCulture); break;
+        case "--album-tile-edge": albumOptions.TileEdge = int.Parse(args[++i], System.Globalization.CultureInfo.InvariantCulture); break;
         default: Console.Error.WriteLine("Unknown option: " + args[i]); return 2;
     }
 }
@@ -80,9 +93,30 @@ try
     var assetPath = assetCatalogPath ?? Dreamness.RA3.Map.Automation.Catalog.AssetCatalog.DefaultPath(artifacts);
     if (File.Exists(assetPath)) assets = Dreamness.RA3.Map.Automation.Catalog.AssetCatalog.Load(assetPath);
     else if (assetCatalogPath != null) { Console.Error.WriteLine("Asset catalogue not found: " + assetPath); return 2; }
+    if (assets != null)
+    {
+        // Optional on purpose: an album is an enhancement, never a prerequisite for editing.
+        var albumPath = albumCatalogPath ?? Dreamness.RA3.Map.Automation.Catalog.AssetAlbum.DefaultPath(artifacts);
+        if (File.Exists(albumPath)) assets.Album = Dreamness.RA3.Map.Automation.Catalog.AssetAlbum.Load(albumPath);
+        else if (albumCatalogPath != null) { Console.Error.WriteLine("Album not found: " + albumPath); return 2; }
+    }
 }
 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or AutomationException or InvalidOperationException)
 { Console.Error.WriteLine("Cannot load asset catalogue: " + ex.Message); return 2; }
+
+if (buildAlbumPath != null)
+{
+    if (assets == null) { Console.Error.WriteLine("--build-album needs an asset catalogue; run --build-catalog first."); return 2; }
+    if (launcher == null) { Console.Error.WriteLine("--build-album needs --launcher to render."); return 2; }
+    try
+    {
+        albumOptions.All = albumAll;
+        albumOptions.Limit = albumLimit;
+        return await AlbumBuildCommand.RunAsync(launcher, artifacts, catalog, assets, buildAlbumPath, albumOptions, CancellationToken.None);
+    }
+    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or AutomationException or InvalidOperationException)
+    { Console.Error.WriteLine("Cannot build album: " + ex.Message); return 2; }
+}
 
 await using var runtime = new AgentRuntime(launcher == null ? null : new WorldBuilderRenderer(launcher, artifacts), catalog, Path.Combine(artifacts, "diagnostics"), assets);
 if (mcp)

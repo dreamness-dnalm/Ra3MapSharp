@@ -49,7 +49,7 @@ public sealed class AgentRuntime : IAsyncDisposable
                 return Success(request, new
                 {
                     protocol = "ra3-agent-jsonl-v1", transports = new[] { "jsonl", "mcp-stdio-2025-06-18" }, commands = _registry.Describe(),
-                    hostCommands = new[] { "system.capabilities", "system.schema", "assets.objects", "assets.catalog_info", "assets.search", "map.inspect_file", "map.close", "preview.start", "preview.inspect", "diagnostics.render", "jobs.status", "jobs.cancel" },
+                    hostCommands = new[] { "system.capabilities", "system.schema", "assets.objects", "assets.catalog_info", "assets.search", "assets.album", "map.inspect_file", "map.close", "preview.start", "preview.inspect", "diagnostics.render", "jobs.status", "jobs.cancel" },
                     objectCatalog = _catalog == null ? null : new { _catalog.SourcePath, _catalog.ContentHash, _catalog.Count, _catalog.Sources },
                     assetCatalog = _assets == null ? null : new
                     {
@@ -85,6 +85,19 @@ public sealed class AgentRuntime : IAsyncDisposable
             {
                 if (_assets == null) throw MissingCatalog();
                 return Success(request, _assets.Search(Arguments<AssetSearchQuery>(request)));
+            }
+            if (request.Command == "assets.album")
+            {
+                if (_assets?.Album == null) throw new AutomationException("ALBUM_UNAVAILABLE",
+                    "未加载物体图册。用 --build-album 生成到 <artifacts>/album 后宿主会自动加载，或用 --album 指定。");
+                var args = Arguments<AlbumArguments>(request);
+                if (string.IsNullOrWhiteSpace(args.TypeName))
+                    throw new AutomationException("INVALID_ARGUMENT", "typeName 必填。");
+                var entry = _assets.FindAlbumEntry(args.TypeName!)
+                    ?? throw new AutomationException("ASSET_NOT_FOUND", "图册中没有该物体的渲染图: " + args.TypeName);
+                var album = _assets.Album;
+                return Success(request, new Rendering.AlbumImage(album.TilePath(entry.File), entry.ImageHash,
+                    entry.TypeName, album.AlbumHash, entry.GridX, entry.GridY, entry.Batch, entry.Bytes));
             }
             if (request.Command == "map.inspect_file")
             {
@@ -189,6 +202,7 @@ public sealed class AgentRuntime : IAsyncDisposable
         public int Limit { get; set; } = 50;
     }
     private sealed class SchemaArguments { public string? Command { get; set; } }
+    private sealed class AlbumArguments { public string? TypeName { get; set; } }
     private sealed class FileInspectionArguments
     {
         public string Path { get; set; } = "";

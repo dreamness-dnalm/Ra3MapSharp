@@ -125,6 +125,65 @@ public class CatalogTests
     }
 
     [Test]
+    public async Task AssetAlbumCommandResolvesRenderedTileAndReportsGaps()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "ra3-album-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var categoryPath = Path.Combine(root, "ObjectCategory.json");
+            await File.WriteAllTextAsync(categoryPath,
+                "[{\"englishName\":\"Trees\",\"chineseName\":\"树草\",\"subObjects\":[\"CC_Tree01\",\"CC_Tree02\"]}]");
+            var catalog = ObjectCatalog.Load(categoryPath);
+            var assets = AssetCatalog.Build(catalog, ThumbnailIndex.ReadCategories(categoryPath), null, DateTimeOffset.UnixEpoch);
+
+            var album = new AssetAlbum
+            {
+                BuiltAtUtc = DateTimeOffset.UnixEpoch, GridCells = 64, SpacingCells = 14,
+                TileCells = 6, SourceImageEdge = 2048, TileEdge = 128
+            };
+            album.Batches.Add(new AssetAlbumBatch(0, 1, "sha256:map", "sha256:image", "sha256:renderer", "scene.overview.png"));
+            album.Entries["CC_Tree01"] = new AssetAlbumEntry("CC_Tree01", "CC_Tree01.png", 3, "sha256:tile", 6, 6, 0);
+            album.Failures.Add(new AssetAlbumFailure("CC_Tree02", "INVALID_ARGUMENT", "nope"));
+            album.AlbumHash = album.ComputeHash();
+            album.RootDirectory = root;
+            assets.Album = album;
+
+            await using var runtime = new AgentRuntime(assets: assets);
+            async Task<CommandResult> Call(string command, object args) => await runtime.ExecuteAsync(
+                new CommandRequest { Command = command, Arguments = JsonSerializer.SerializeToElement(args) });
+
+            var tile = await Call("assets.album", new { typeName = "CC_Tree01" });
+            Assert.That(tile.Status, Is.EqualTo("succeeded"), tile.Error?.Message);
+            var data = JsonSerializer.SerializeToElement(tile.Data, AgentJson.Options);
+            Assert.That(data.GetProperty("imagePath").GetString(), Does.EndWith(Path.Combine("tiles", "CC_Tree01.png")));
+            Assert.That(data.GetProperty("imageHash").GetString(), Is.EqualTo("sha256:tile"));
+            Assert.That(data.GetProperty("albumHash").GetString(), Is.EqualTo(album.AlbumHash));
+
+            Assert.That((await Call("assets.album", new { typeName = "AM_MISSING" })).Error?.Code, Is.EqualTo("ASSET_NOT_FOUND"));
+            Assert.That((await Call("assets.album", new { })).Error?.Code, Is.EqualTo("INVALID_ARGUMENT"));
+
+            var search = JsonSerializer.SerializeToElement((await Call("assets.search",
+                new { kind = "object", query = "Tree" })).Data, AgentJson.Options);
+            var items = search.GetProperty("items").EnumerateArray().ToArray();
+            Assert.That(items.Single(i => i.GetProperty("name").GetString() == "CC_Tree01")
+                .GetProperty("albumFile").GetString(), Is.EqualTo("CC_Tree01.png"));
+            Assert.That(items.Single(i => i.GetProperty("name").GetString() == "CC_Tree02")
+                .GetProperty("hasAlbum").GetBoolean(), Is.False);
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [Test]
+    public async Task AssetAlbumCommandWithoutAnAlbumSaysSo()
+    {
+        await using var runtime = new AgentRuntime();
+        var result = await runtime.ExecuteAsync(new CommandRequest
+        { Command = "assets.album", Arguments = JsonSerializer.SerializeToElement(new { typeName = "CC_Tree01" }) });
+        Assert.That(result.Error?.Code, Is.EqualTo("ALBUM_UNAVAILABLE"));
+    }
+
+    [Test]
     public void WithoutBomDropsOnlyALeadingMarker()
     {
         Assert.That(AgentJson.WithoutBom("{\"a\":1}"), Is.EqualTo("{\"a\":1}"));

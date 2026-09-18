@@ -929,6 +929,22 @@
       "additionalProperties": false
     }
   },
+  "assets.album": {
+    "description": "Return the agent-rendered appearance image for an object the editor ships no screenshot for.",
+    "argumentsSchema": {
+      "type": "object",
+      "properties": {
+        "typeName": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "typeName"
+      ],
+      "additionalProperties": false
+    }
+  },
   "assets.catalog_info": {
     "description": "Report the frozen asset catalogue: counts, texture surfaces and themes, object categories, screenshot coverage, sources and caveats.",
     "argumentsSchema": {

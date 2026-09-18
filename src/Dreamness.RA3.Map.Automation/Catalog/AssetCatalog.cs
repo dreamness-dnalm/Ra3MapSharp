@@ -55,6 +55,13 @@ public sealed class AssetCatalog
     /// <summary>Explicit statements about evidence quality, surfaced by assets.catalog_info.</summary>
     public List<string> Notes { get; set; } = new();
 
+    /// <summary>
+    /// Appearance images the agent rendered itself. Kept out of catalog.json and attached by the
+    /// host so the album can be rebuilt on its own schedule without invalidating the catalogue.
+    /// </summary>
+    [JsonIgnore]
+    public AssetAlbum? Album { get; set; }
+
     private static readonly JsonSerializerOptions Json = AutomationJson.CompactOptions;
 
     public static AssetCatalog Build(ObjectCatalog objects, IReadOnlyList<AssetCategory> categories,
@@ -149,6 +156,7 @@ public sealed class AssetCatalog
         objectCategories = Categories.OrderByDescending(c => c.Members.Count).ThenBy(c => c.ChineseName, StringComparer.Ordinal)
             .ToDictionary(c => c.ChineseName, c => c.Members.Count, StringComparer.Ordinal),
         thumbnails = Thumbnails,
+        album = Album?.Info(),
         sources = Sources,
         notes = Notes
     };
@@ -178,7 +186,7 @@ public sealed class AssetCatalog
                 .Where(t => string.IsNullOrWhiteSpace(query.Theme) || t.Theme.Equals(query.Theme, StringComparison.OrdinalIgnoreCase))
                 .Where(t => !query.OnlyTransition || t.IsTransition)
                 .Select(t => new AssetSearchItem("texture", t.Name, null, t.Surface, t.Theme, t.Variant, t.Kind,
-                    t.IsTransition, t.IsStructure, false, null)));
+                    t.IsTransition, t.IsStructure, false, null, false, null)));
         }
         if (kind is not "texture")
         {
@@ -190,7 +198,9 @@ public sealed class AssetCatalog
                     || o.Categories.Any(c => c.Equals(query.Category, StringComparison.OrdinalIgnoreCase)))
                 .Where(o => !query.OnlyMissingScreenshot || !o.HasEditorScreenshot)
                 .Select(o => new AssetSearchItem("object", o.TypeName, o.Categories, null, null, null, null,
-                    null, null, o.HasEditorScreenshot, o.HasEditorScreenshot ? o.TypeName + ".jpg" : null)));
+                    null, null, o.HasEditorScreenshot, o.HasEditorScreenshot ? o.TypeName + ".jpg" : null,
+                    Album != null && Album.Entries.ContainsKey(o.TypeName),
+                    Album != null && Album.Entries.TryGetValue(o.TypeName, out var tile) ? tile.File : null)));
         }
 
         var ordered = items.OrderBy(i => i.Kind, StringComparer.Ordinal).ThenBy(i => i.Name, StringComparer.Ordinal).ToArray();
@@ -209,12 +219,16 @@ public sealed class AssetCatalog
     /// <summary>Where the agent looks for a catalogue when none is given explicitly.</summary>
     public static string DefaultPath(string artifactsDirectory) =>
         Path.Combine(Path.GetFullPath(artifactsDirectory), "catalog", "catalog.json");
+
+    /// <summary>The rendered tile for an object, or null when the album has none.</summary>
+    public AssetAlbumEntry? FindAlbumEntry(string typeName) =>
+        Album != null && Album.Entries.TryGetValue(typeName, out var entry) ? entry : null;
 }
 
 /// <summary>One search hit. A single shape keeps the contract stable across kinds.</summary>
 public sealed record AssetSearchItem(string Kind, string Name, IReadOnlyList<string>? Categories,
     string? Surface, string? Theme, int? Variant, string? SurfaceKind, bool? IsTransition, bool? IsStructure,
-    bool HasEditorScreenshot, string? Thumbnail);
+    bool HasEditorScreenshot, string? Thumbnail, bool HasAlbum, string? AlbumFile);
 
 public sealed class AssetSearchQuery
 {

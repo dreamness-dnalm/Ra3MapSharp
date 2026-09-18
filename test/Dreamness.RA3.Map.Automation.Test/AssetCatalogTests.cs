@@ -152,6 +152,44 @@ public class AssetCatalogTests
     }
 
     [Test]
+    public void AlbumRoundTripsAndItsHashMovesWithContent()
+    {
+        var path = Path.Combine(_root, "album.json");
+        var album = new AssetAlbum
+        {
+            BuiltAtUtc = DateTimeOffset.UnixEpoch, GridCells = 64, SpacingCells = 14,
+            TileCells = 6, SourceImageEdge = 2048, TileEdge = 128
+        };
+        album.Batches.Add(new AssetAlbumBatch(0, 1, "sha256:map", "sha256:image", "sha256:renderer", "scene.overview.png"));
+        album.Entries["CC_Tree01"] = new AssetAlbumEntry("CC_Tree01", "CC_Tree01.png", 3, "sha256:tile", 6, 6, 0);
+        album.AlbumHash = album.ComputeHash();
+        album.Save(path);
+
+        var loaded = AssetAlbum.Load(path);
+        Assert.That(loaded.Entries["CC_Tree01"].File, Is.EqualTo("CC_Tree01.png"));
+        Assert.That(loaded.AlbumHash, Is.EqualTo(album.AlbumHash));
+        Assert.That(loaded.RootDirectory, Is.EqualTo(Path.GetDirectoryName(path)));
+        Assert.That(loaded.TilePath("CC_Tree01.png"), Is.EqualTo(Path.Combine(Path.GetDirectoryName(path)!, "tiles", "CC_Tree01.png")));
+
+        loaded.Failures.Add(new AssetAlbumFailure("CC_Tree02", "INVALID_ARGUMENT", "nope"));
+        Assert.That(loaded.ComputeHash(), Is.Not.EqualTo(album.AlbumHash), "failures are part of the album identity");
+    }
+
+    [Test]
+    public void AlbumIsOptionalForTheCatalogue()
+    {
+        var catalog = Build();
+        Assert.That(catalog.Album, Is.Null);
+        // The host serializes with web defaults (camelCase), so mirror that here rather than the
+        // PascalCase a record property keeps under the default options.
+        var json = JsonSerializer.SerializeToElement(catalog.Search(new AssetSearchQuery { Kind = "object", Query = "CC_Tree01" }),
+            new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        var item = json.GetProperty("items")[0];
+        Assert.That(item.GetProperty("hasAlbum").GetBoolean(), Is.False);
+        Assert.That(item.GetProperty("albumFile").ValueKind, Is.EqualTo(JsonValueKind.Null));
+    }
+
+    [Test]
     public void SearchRejectsAnUnknownKindAndBadPaging()
     {
         var catalog = Build();
