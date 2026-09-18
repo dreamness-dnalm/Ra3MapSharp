@@ -23,8 +23,10 @@ internal sealed class ScatterObjectsHandler : ICommandHandler
         if (args.Region == null || args.Profile == null || args.Seed == null || args.Count < 1 || args.Count > 2000
             || !float.IsFinite(args.MinDistanceCells) || args.MinDistanceCells < 1
             || args.TypeNames == null || args.TypeNames.Length < 1 || args.TypeNames.Length > 64
-            || args.Exclusions == null || args.Exclusions.Length > 100)
-            throw new AutomationException("INVALID_ARGUMENT", "散布需要 region、profile、seed、1–2000个对象、至少1格间距和1–64个类型；禁放区最多100个。");
+            || args.Exclusions == null || args.Exclusions.Length > 100
+            || args.Clusters is < 0 or > 500
+            || args.ClusterRadiusCells is < 1 or > 128 || args.ClusterSpacingCells is < 2 or > 512)
+            throw new AutomationException("INVALID_ARGUMENT", "散布需要 region、profile、seed、1–2000个对象、至少1格间距和1–64个类型；禁放区最多100个；clusters 0–500、簇半径 1–128、簇间距 2–512。");
         foreach (var type in args.TypeNames)
         {
             if (!ObjectHandler.ValidTypeName(type)) throw new AutomationException("INVALID_ARGUMENT", "typeNames 包含非法普通对象资源名。");
@@ -118,12 +120,48 @@ internal sealed class ScatterObjectsHandler : ICommandHandler
             state = unchecked(state * 1664525u + 1013904223u);
             return state / 4294967296d;
         }
+        // Minimum-distance repulsion alone lands below the clumping that shipped maps show
+        // (measured index 0.92 against a corpus range of 2.4-3.8), so objects are drawn from
+        // seeded clusters and only jittered within them. Clusters of 0 keeps the old behaviour
+        // and reports the index it produces, rather than silently changing existing output.
+        var allowed = new HashSet<(int X, int Y)>(cells);
+        var clusterCentres = new List<(int X, int Y)>();
+        if (args.Clusters > 0)
+        {
+            var separation = Math.Max(args.ClusterRadiusCells * 2.0, args.ClusterSpacingCells);
+            for (var attempt = 0; attempt < args.Clusters * 200 && clusterCentres.Count < args.Clusters; attempt++)
+            {
+                var candidate = cells[(int)(Random() * cells.Count)];
+                var tooClose = false;
+                foreach (var centre in clusterCentres)
+                {
+                    if (Math.Pow(centre.X - candidate.X, 2) + Math.Pow(centre.Y - candidate.Y, 2) < separation * separation)
+                    { tooClose = true; break; }
+                }
+                if (!tooClose) clusterCentres.Add(candidate);
+            }
+        }
+        (int X, int Y) PickCell()
+        {
+            if (clusterCentres.Count == 0) return cells[(int)(Random() * cells.Count)];
+            var centre = clusterCentres[(int)(Random() * clusterCentres.Count)];
+            for (var tries = 0; tries < 24; tries++)
+            {
+                var angle = Random() * Math.PI * 2;
+                var radius = Math.Sqrt(Random()) * args.ClusterRadiusCells;
+                var candidate = ((int)Math.Floor(centre.X + Math.Cos(angle) * radius),
+                                 (int)Math.Floor(centre.Y + Math.Sin(angle) * radius));
+                if (allowed.Contains(candidate)) return candidate;
+            }
+            return cells[(int)(Random() * cells.Count)];
+        }
+
         var placements = new List<(float X, float Y, string Type, float Angle)>();
         var attempts = 0;
         for (; attempts < args.Count * 100 && placements.Count < args.Count; attempts++)
         {
             token.ThrowIfCancellationRequested();
-            var cell = cells[(int)(Random() * cells.Count)];
+            var cell = PickCell();
             var mapX = cell.X + .05f + (float)Random() * .9f;
             var mapY = cell.Y + .05f + (float)Random() * .9f;
             if (polygon != null)
@@ -160,7 +198,15 @@ internal sealed class ScatterObjectsHandler : ICommandHandler
             obj.Angle = MapAngles.ToDegrees(p.Angle);
             ids.Add(session.Handles.RegisterNewUnit());
         }
+        // Reported so the caller can see whether the layout matches what shipped maps look like,
+        // instead of discovering it later in a review.
+        var clumpingIndex = MapArtProfile.MeasureClumping(
+            map.GetUnitObjects().Select(o => (o.Position.X / 10d, o.Position.Y / 10d)).ToList(),
+            map.MapPlayableWidth, map.MapPlayableHeight);
         return Task.FromResult<object?>(new { objectIds = ids, placed = ids.Count, attempts, seed = args.Seed,
+            clustering = clusterCentres.Count > 0 ? "clustered" : "uniform",
+            clusters = clusterCentres.Count,
+            clumpingIndex = Math.Round(clumpingIndex, 3),
             algorithm = "lcg32-cell-jitter-v2", catalogHash = _catalog?.ContentHash,
             assetValidation = _catalog == null ? "unverified" : "editor-declared",
             exclusionModel = "whole-selected-cells", spacingModel = footprintSet == null ? "object-centers" : "object-centers-and-explicit-oriented-rectangles-v1",
@@ -182,5 +228,12 @@ internal sealed class ScatterObjectsHandler : ICommandHandler
         public string[]? TypeNames { get; set; }
         public string? CatalogHash { get; set; }
         public ObjectFootprint[]? Footprints { get; set; }
+
+        /// <summary>Grove count. Zero keeps the evenly spaced behaviour and reports its index.</summary>
+        public int Clusters { get; set; }
+
+        public int ClusterRadiusCells { get; set; } = 14;
+
+        public int ClusterSpacingCells { get; set; } = 40;
     }
 }
