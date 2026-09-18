@@ -34,7 +34,7 @@ dotnet test --filter "FullyQualifiedName~BlendTests"
 # Run single test method
 dotnet test --filter "FullyQualifiedName~BlendTests.TestGetBlendDetailInfo"
 
-# Agent stack: stable, no RA3 install needed (196 + 38 tests)
+# Agent stack: stable, no RA3 install needed (199 + 38 tests)
 dotnet test test/Dreamness.RA3.Map.Automation.Test/Dreamness.RA3.Map.Automation.Test.csproj --no-restore --filter "TestCategory!=UsageExamples"
 dotnet test test/Dreamness.RA3.Map.Agent.Test/Dreamness.RA3.Map.Agent.Test.csproj --no-restore
 

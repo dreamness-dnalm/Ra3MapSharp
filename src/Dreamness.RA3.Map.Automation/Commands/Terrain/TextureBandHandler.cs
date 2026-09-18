@@ -90,9 +90,10 @@ internal sealed class PaintTextureByHeightHandler : ICommandHandler
 
         public string? Texture { get; set; }
 
-        /// <summary>Several materials for this band, chosen per coarse block.</summary>
+        /// <summary>Several materials for this band, chosen from a noise field.</summary>
         public List<string>? TextureNames { get; set; }
 
+        /// <summary>Feature size of the selection field, in cells. Larger means broader regions.</summary>
         public int VariantBlockCells { get; set; } = 24;
 
         public List<string>? Names()
@@ -103,20 +104,53 @@ internal sealed class PaintTextureByHeightHandler : ICommandHandler
             return names.Count == 0 ? null : names.Distinct(StringComparer.Ordinal).Take(8).ToList();
         }
 
-        /// <summary>Deterministic per-block choice, so the same inputs always paint the same map.</summary>
+        /// <summary>
+        /// Deterministic choice, so the same inputs always paint the same map.
+        /// <para>
+        /// Selecting per axis-aligned block is what made two earlier attempts look generated: any
+        /// block size shows up as a grid of squares, so the grid itself is the artifact, not its
+        /// period. A smooth noise field gives regions with organic boundaries instead, and stays
+        /// reproducible because it is a pure function of the coordinates.
+        /// </para>
+        /// </summary>
         public string Pick(int x, int y)
         {
             var names = Names()!;
             if (names.Count == 1) return names[0];
-            var blockX = (int)Math.Floor(x / (double)VariantBlockCells);
-            var blockY = (int)Math.Floor(y / (double)VariantBlockCells);
-            // Multiplicative xor alone relates to the block parity and paints a checkerboard
-            // when the variant count is even; the final mix is what breaks that correlation.
-            var hash = unchecked((uint)blockX * 0x9E3779B1u) ^ unchecked((uint)blockY * 0x85EBCA77u);
+            var feature = Math.Max(2, VariantBlockCells);
+            // Two octaves: the coarse one sets the region, the fine one breaks up its edge.
+            var value = Noise(x, y, feature) * 0.75
+                + Noise(x + 4096, y + 4096, Math.Max(2, feature / 3.0)) * 0.25;
+            return names[Math.Clamp((int)(value * names.Count), 0, names.Count - 1)];
+        }
+
+        /// <summary>Bilinear value noise over a hashed lattice; deterministic.</summary>
+        private static double Noise(int x, int y, double feature)
+        {
+            var gx = x / feature;
+            var gy = y / feature;
+            var x0 = (int)Math.Floor(gx);
+            var y0 = (int)Math.Floor(gy);
+            var fx = gx - x0;
+            var fy = gy - y0;
+            var sx = fx * fx * (3 - 2 * fx);
+            var sy = fy * fy * (3 - 2 * fy);
+            var n00 = Lattice(x0, y0);
+            var n10 = Lattice(x0 + 1, y0);
+            var n01 = Lattice(x0, y0 + 1);
+            var n11 = Lattice(x0 + 1, y0 + 1);
+            var top = n00 + (n10 - n00) * sx;
+            var bottom = n01 + (n11 - n01) * sx;
+            return top + (bottom - top) * sy;
+        }
+
+        private static double Lattice(int x, int y)
+        {
+            var hash = unchecked((uint)x * 0x9E3779B1u) ^ unchecked((uint)y * 0x85EBCA77u);
             hash ^= hash >> 15;
             hash = unchecked(hash * 0x2545F491u);
             hash ^= hash >> 13;
-            return names[(int)(hash % (uint)names.Count)];
+            return (hash >> 8) / 16777216.0;
         }
     }
 }

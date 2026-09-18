@@ -173,6 +173,7 @@ dotnet pack Ra3MapSharp.sln -c Release
   - `dotnet build src/Dreamness.RA3.Map.Automation/Dreamness.RA3.Map.Automation.csproj --no-restore`
   - `dotnet test test/Dreamness.RA3.Map.Automation.Test/Dreamness.RA3.Map.Automation.Test.csproj --no-restore --filter "TestCategory!=UsageExamples"`
   - 新增/修改命令时**必须同步 `src/Dreamness.RA3.Map.Agent/Protocol/command-schemas.json`**，否则工具描述与参数校验不一致。
+- **跑 CLI 前必须重建 Agent 项目**：命令行入口是 `src/Dreamness.RA3.Map.Agent` 的 DLL，它引用 Automation。只 build Automation 的话 CLI 仍用旧副本，表现为「改了代码但输出完全没变」。
 - 改 `Agent`（含 MCP 协议、渲染装配、`command-schemas.json`）：
   - `dotnet build src/Dreamness.RA3.Map.Agent/Dreamness.RA3.Map.Agent.csproj --no-restore`
   - `dotnet test test/Dreamness.RA3.Map.Agent.Test/Dreamness.RA3.Map.Agent.Test.csproj --no-restore`
