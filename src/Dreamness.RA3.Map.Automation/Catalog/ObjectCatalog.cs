@@ -10,6 +10,10 @@ public sealed class ObjectCatalog
     public string SourcePath { get; }
     public string ContentHash { get; }
     public int Count => _entries.Count;
+
+    /// <summary>Every declared entry. Used to freeze a complete catalogue rather than a page of it.</summary>
+    public IReadOnlyCollection<ObjectCatalogEntry> Entries => _entries.Values;
+
     public IReadOnlyList<ObjectCatalogSource> Sources { get; }
 
     private ObjectCatalog(string path, string hash, Dictionary<string, ObjectCatalogEntry> entries, IReadOnlyList<ObjectCatalogSource> sources)

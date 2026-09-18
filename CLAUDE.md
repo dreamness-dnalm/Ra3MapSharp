@@ -34,7 +34,7 @@ dotnet test --filter "FullyQualifiedName~BlendTests"
 # Run single test method
 dotnet test --filter "FullyQualifiedName~BlendTests.TestGetBlendDetailInfo"
 
-# Agent stack: stable, no RA3 install needed (163 + 23 tests)
+# Agent stack: stable, no RA3 install needed (172 + 26 tests)
 dotnet test test/Dreamness.RA3.Map.Automation.Test/Dreamness.RA3.Map.Automation.Test.csproj --no-restore --filter "TestCategory!=UsageExamples"
 dotnet test test/Dreamness.RA3.Map.Agent.Test/Dreamness.RA3.Map.Agent.Test.csproj --no-restore
 
@@ -88,7 +88,7 @@ The codebase follows a layered architecture with clear separation of concerns:
 
 7. **Agent Layer** (`Dreamness.RA3.Map.Agent`)
    - Host process for the kernel: MCP stdio server (`Protocol/McpServer.cs`), plus JSONL/one-shot batch modes.
-   - Tool surface: 51 MCP tools defined by `Protocol/command-schemas.json` (`map.*`, `terrain.*`, `objects.*`, `texture.*`, `design.*`, `edits.*`, `preview.*`, `jobs.*`, `protections.*`, `history.*`).
+   - Tool surface: 53 MCP tools defined by `Protocol/command-schemas.json` (`map.*`, `terrain.*`, `objects.*`, `texture.*`, `design.*`, `edits.*`, `preview.*`, `jobs.*`, `protections.*`, `history.*`).
    - Rendering: `Rendering/{DiagnosticRenderer,WorldBuilderRenderer,PreviewInspection}.cs`. Diagnostic images are pure managed; real overview images are delegated to the external `WbLauncher.exe` and are **asynchronous jobs** (`preview.start` returns a `jobId`; poll `jobs.status`; EOF on stdin cancels outstanding jobs).
    - Real overview rendering needs `--launcher <WbLauncher.exe>` or `RA3_WB_LAUNCHER`. Without it, file editing still works and only real rendering is unavailable.
 
@@ -214,6 +214,7 @@ Assets use lazy parsing - they're only parsed when accessed:
 - `docs/BlendQueryAPI.md`: Comprehensive texture blending API documentation
 - `docs/Agent-Usage.md`, `docs/MCP-Usage.md`: How an agent drives the kernel over MCP (session/revision discipline, candidate workflow).
 - `docs/Agent-System-Roadmap.md`: Feasibility conclusion and phased plan for the whole agent-map-authoring system (includes the current scope decisions).
+- `src/Dreamness.RA3.Map.Automation/Catalog/`: the asset catalogue (textures with derived surface/theme semantics, editor-declared objects, categories, screenshot coverage) plus `ObjectCatalog`. Build it with `dotnet <agent.dll> --build-catalog <path> --launcher <WbLauncher.exe>`; the host auto-loads `<artifacts>/catalog/catalog.json`, and `assets.catalog_info` / `assets.search` serve it.
 
 ## Development Notes
 

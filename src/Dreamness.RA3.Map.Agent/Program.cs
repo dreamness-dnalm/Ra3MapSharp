@@ -12,6 +12,9 @@ string artifacts = Path.Combine(Environment.CurrentDirectory, "artifacts", "agen
 string? requests = null;
 string? catalogPath = null;
 string? translationsPath = null;
+string? assetCatalogPath = null;
+string? buildCatalogPath = null;
+string? screenshotsDirectory = null;
 bool mcp = false;
 for (var i = 0; i < args.Length; i++)
 {
@@ -31,6 +34,9 @@ for (var i = 0; i < args.Length; i++)
         case "--requests": requests = args[++i]; break;
         case "--object-catalog": catalogPath = args[++i]; break;
         case "--object-translations": translationsPath = args[++i]; break;
+        case "--asset-catalog": assetCatalogPath = args[++i]; break;
+        case "--build-catalog": buildCatalogPath = args[++i]; break;
+        case "--screenshots": screenshotsDirectory = args[++i]; break;
         default: Console.Error.WriteLine("Unknown option: " + args[i]); return 2;
     }
 }
@@ -49,7 +55,36 @@ try
 }
 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or AutomationException or InvalidOperationException)
 { Console.Error.WriteLine("Cannot load object catalogue: " + ex.Message); return 2; }
-await using var runtime = new AgentRuntime(launcher == null ? null : new WorldBuilderRenderer(launcher, artifacts), catalog, Path.Combine(artifacts, "diagnostics"));
+
+if (buildCatalogPath != null)
+{
+    try
+    {
+        if (catalog == null || catalogPath == null)
+        { Console.Error.WriteLine("--build-catalog needs --object-catalog ObjectCategory.json (or --launcher)."); return 2; }
+        var screenshots = screenshotsDirectory;
+        if (screenshots == null && launcher != null)
+        {
+            var candidate = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(launcher))!, "data", "objectScreenShot");
+            if (Directory.Exists(candidate)) screenshots = candidate;
+        }
+        return CatalogBuildCommand.Run(catalog, catalogPath, screenshots, buildCatalogPath);
+    }
+    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or AutomationException or InvalidOperationException)
+    { Console.Error.WriteLine("Cannot build asset catalogue: " + ex.Message); return 2; }
+}
+
+Dreamness.RA3.Map.Automation.Catalog.AssetCatalog? assets = null;
+try
+{
+    var assetPath = assetCatalogPath ?? Dreamness.RA3.Map.Automation.Catalog.AssetCatalog.DefaultPath(artifacts);
+    if (File.Exists(assetPath)) assets = Dreamness.RA3.Map.Automation.Catalog.AssetCatalog.Load(assetPath);
+    else if (assetCatalogPath != null) { Console.Error.WriteLine("Asset catalogue not found: " + assetPath); return 2; }
+}
+catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or AutomationException or InvalidOperationException)
+{ Console.Error.WriteLine("Cannot load asset catalogue: " + ex.Message); return 2; }
+
+await using var runtime = new AgentRuntime(launcher == null ? null : new WorldBuilderRenderer(launcher, artifacts), catalog, Path.Combine(artifacts, "diagnostics"), assets);
 if (mcp)
 {
     if (requests != null) { Console.Error.WriteLine("--mcp cannot be combined with --requests."); return 2; }
@@ -58,7 +93,7 @@ if (mcp)
     while ((rpcLine = await Console.In.ReadLineAsync()) != null)
     {
         if (string.IsNullOrWhiteSpace(rpcLine)) continue;
-        var response = await server.HandleAsync(rpcLine);
+        var response = await server.HandleAsync(AgentJson.WithoutBom(rpcLine));
         if (response != null) Console.WriteLine(JsonSerializer.Serialize(response, AgentJson.Options));
     }
     return 0;
@@ -69,7 +104,7 @@ async Task<bool> Execute(string json)
     CommandRequest request = new();
     try
     {
-        request = JsonSerializer.Deserialize<CommandRequest>(json, AgentJson.Options) ?? throw new JsonException("Expected command object.");
+        request = JsonSerializer.Deserialize<CommandRequest>(AgentJson.WithoutBom(json), AgentJson.Options) ?? throw new JsonException("Expected command object.");
         result = await runtime.ExecuteAsync(request);
     }
     catch (JsonException ex)
@@ -81,7 +116,7 @@ async Task<bool> Execute(string json)
 }
 if (requests != null)
 {
-    using var document = JsonDocument.Parse(await File.ReadAllTextAsync(requests));
+    using var document = JsonDocument.Parse(AgentJson.WithoutBom(await File.ReadAllTextAsync(requests)));
     foreach (var command in document.RootElement.EnumerateArray())
         if (!await Execute(command.GetRawText())) return 1;
     return 0;

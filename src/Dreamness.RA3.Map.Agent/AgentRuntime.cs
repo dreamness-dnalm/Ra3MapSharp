@@ -14,6 +14,7 @@ public sealed class AgentRuntime : IAsyncDisposable
 {
     private readonly CommandRegistry _registry;
     private readonly ObjectCatalog? _catalog;
+    private readonly AssetCatalog? _assets;
     private readonly CommandExecutor _executor;
     private readonly WorldBuilderRenderer? _renderer;
     private readonly ConcurrentDictionary<string, RenderJob> _jobs = new();
@@ -23,10 +24,12 @@ public sealed class AgentRuntime : IAsyncDisposable
     private string? _currentSession;
     private readonly string _diagnosticsRoot;
 
-    public AgentRuntime(WorldBuilderRenderer? renderer = null, ObjectCatalog? catalog = null, string? diagnosticsRoot = null)
+    public AgentRuntime(WorldBuilderRenderer? renderer = null, ObjectCatalog? catalog = null,
+        string? diagnosticsRoot = null, AssetCatalog? assets = null)
     {
         _diagnosticsRoot = diagnosticsRoot ?? Path.Combine(Environment.CurrentDirectory, "artifacts", "agent-diagnostics");
         _catalog = catalog;
+        _assets = assets;
         _registry = CommandRegistry.CreateDefault(catalog);
         _renderer = renderer;
         _executor = new CommandExecutor(_registry);
@@ -46,8 +49,15 @@ public sealed class AgentRuntime : IAsyncDisposable
                 return Success(request, new
                 {
                     protocol = "ra3-agent-jsonl-v1", transports = new[] { "jsonl", "mcp-stdio-2025-06-18" }, commands = _registry.Describe(),
-                    hostCommands = new[] { "system.capabilities", "system.schema", "assets.objects", "map.inspect_file", "map.close", "preview.start", "preview.inspect", "diagnostics.render", "jobs.status", "jobs.cancel" },
+                    hostCommands = new[] { "system.capabilities", "system.schema", "assets.objects", "assets.catalog_info", "assets.search", "map.inspect_file", "map.close", "preview.start", "preview.inspect", "diagnostics.render", "jobs.status", "jobs.cancel" },
                     objectCatalog = _catalog == null ? null : new { _catalog.SourcePath, _catalog.ContentHash, _catalog.Count, _catalog.Sources },
+                    assetCatalog = _assets == null ? null : new
+                    {
+                        _assets.CatalogHash, _assets.BuiltAtUtc,
+                        textures = _assets.Textures.Count, objects = _assets.Objects.Count,
+                        categories = _assets.Categories.Count, editorScreenshots = _assets.Thumbnails.Files,
+                        _assets.Notes
+                    },
                     batch = new { command = "batch.execute", maxCommands = 100, mutationsOnly = true },
                     renderer = _renderer?.GetAvailability(),
                     limitations = new[] { "MCP 当前提供本地 stdio 入口；未接入地编伴侣 HTTP。", "预览只检查渲染成功，不能证明游戏可玩。", "新设计功能将增量加入，命令清单以这里为准。" }
@@ -65,6 +75,16 @@ public sealed class AgentRuntime : IAsyncDisposable
                 if (_catalog == null) throw new AutomationException("CATALOG_UNAVAILABLE", "使用 --object-catalog 或 --launcher 加载素材分类文件。");
                 var args = Arguments<CatalogArguments>(request);
                 return Success(request, _catalog.Search(args.Query, args.Offset, args.Limit));
+            }
+            if (request.Command == "assets.catalog_info")
+            {
+                if (_assets == null) throw MissingCatalog();
+                return Success(request, _assets.Info());
+            }
+            if (request.Command == "assets.search")
+            {
+                if (_assets == null) throw MissingCatalog();
+                return Success(request, _assets.Search(Arguments<AssetSearchQuery>(request)));
             }
             if (request.Command == "map.inspect_file")
             {
@@ -154,6 +174,9 @@ public sealed class AgentRuntime : IAsyncDisposable
         catch (Exception ex) { job.Set("failed", error: new CommandError { Code = "RENDER_ERROR", Message = ex.Message }); }
         finally { if (entered) _renderGate.Release(); }
     }
+
+    private static AutomationException MissingCatalog() => new("CATALOG_UNAVAILABLE",
+        "未加载素材目录。先运行 --build-catalog 生成 catalog.json（Agent 会按 --artifacts 下的 catalog/catalog.json 自动加载），或用 --asset-catalog 指定。");
 
     private static T Arguments<T>(CommandRequest request) where T : new() =>
         request.Arguments.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined

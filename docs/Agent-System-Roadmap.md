@@ -112,7 +112,7 @@
 | 编号 | 缺口 | 证据 | 性质 |
 | --- | --- | --- | --- |
 | **G1** | **美术与内容密度**：单色铺满、树成规则图案、材质过渡无依据、缺地标与细节 | 真渲染图 + `art-review.json`=`needs-iteration` | 方法与内容问题 |
-| **G2** | **素材体系未成型**：只有编辑器声明名称表（`editor-declared`），无缩略图、无持久占地、无 prefab、无 Mod 维度 | 缩略图/模板就在编辑器里却没接入；占地靠每次调用显式传参 | 工程量中等，收益最大 |
+| **G2** | **素材体系未成型**：只有编辑器声明名称表（`editor-declared`），无持久占地、无 prefab、无 Mod 维度 | 占地靠每次调用显式传参。**缩略图并不像原先设想的那样可用**：实测 1688 个物体只有 482 个有同名编辑器截图，其余 2559 张属于单位/建筑名单 | 工程量中等，收益最大 |
 | **G3** | **各部件从未接线**：Automation MCP 无任何客户端配置；30033/30034 未运行 | 全工作区无 `*mcp*.json`；端口探测为 false | 最低成本、最高杠杆 |
 | **G4** | **未提交 / 未交付**：全部在 `feat/automation`；无安装器、无客户端配置写入、无版本发布；`AGENTS.md`/`CLAUDE.md` 未收录新项目 | `git status` 全部未跟踪 | 低风险，必须先做 |
 | **G5** | **两套系统未分工**：A=Ra3MapSharp（net6.0，编辑内核）；B=Ra3MapUtils v2（net10.0-windows，外壳与服务） | TFM、MCP 宿主、素材格式、地图模型都不同 | 架构决策，越晚越贵 |
@@ -226,11 +226,35 @@
 
 **仍未处理**：内存中每个修订仍保留完整状态，长会话 RSS 仍随"修订数 × 设计实体总面积"增长；`waypointObjectIds`/`unitObjectIds` 也仍按修订全量存储。
 
+#### S1 执行记录（2026-09-18，进行中；玩法/脚本按本轮决策推迟）
+
+**素材目录已建成**（`catalog.json`，232.9 KB，`catalogHash` 随内容变化）。新增三个入口：`--build-catalog` 生成、`assets.catalog_info` 汇报、`assets.search` 检索。
+
+| 项 | 数量 | 说明 |
+| --- | --- | --- |
+| 纹理 | 406 | 来自引擎 `TextureEnum`：`Grass` 110、`Pavement` 99（含 `Pave` 15）、`Dirt` 51、`Transition` 45、`Cliff` 24… |
+| 物体 | 1688 | 编辑器 `ObjectCategory.json` + `ObjWndTrans.json` |
+| 分类 | 24 | 树草 222、悬崖斜坡 277、道路块 184、墙 139… |
+
+**新增的可用语义**（此前完全没有）：纹理按 `<表面>_<主题><变体>` 解析出 `surface` / `theme` / `kind`，主题即地域（Yucatan 45、CapeCod 39、Heidelberg 33、Iceland 24…），`Transition_*` 单独标为过渡材质——这是「材质过渡有依据」的第一块砖。
+
+两条**从数据里学到的**规则，都写进了测试：
+- `Pave_*` 与 `Pavement_*` 是同一表面，合并（→ 99）。
+- **主题只在「余部全小写」时才算截断**：`Heidel` 是 `Heidelberg` 的截断（→ 33）；而 `Geneva` 与 `GenevaClockA/B/C/D` 是不同地点，绝不能合并——最初的宽松前缀规则把 11 个 Geneva 吞进了 `GenevaClockA`，已修。
+
+**修正一个先前的错误假设**：§3 G2 与 §5 S1 原写「3041 张缩略图就在编辑器里却没接入」，读起来像接上就有物体图。实测（`assets.search onlyMissingScreenshot`）：**1688 个物体只有 482 个有同名截图，1206 个没有**；未匹配的 2559 张是单位/建筑名单（`AlliedAirfield` 之类），属于另一套语义。所以物体图册必须靠**自建渲染**补，不能指望编辑器截图。
+
+**新增/变化的接口**：`assets.catalog_info`、`assets.search`（按 `kind`/`surface`/`theme`/`category`/`onlyMissingScreenshot`/`onlyTransition` 过滤；未指定 `kind` 时由过滤器推断——设了 surface/theme 即只搜纹理）。命令总数 51 → 53。
+
+**顺带修掉一个协议级坑**：宿主现在容忍首条消息前缀的 UTF-8 BOM。实测每次运行的第一条 JSONL 都会带上 BOM，导致**整个会话的第一个请求**必然失败，且错误信息是误导性的 `'0xEF' is an invalid start of a value`。修在 `AgentJson.WithoutBom`，有测试。
+
+**下一步（本轮未做）**：物体图册生成器——用 `objects.place` 把物体摆到网格测试图、`preview.start` 真实渲染、按渲染返回的 `pixelToPlayableGrid` 切图，补上那 1206 个缺图。占地（`footprints`）持久化同理在后。
+
 ### S1 内容库（素材 / prefab / 范例）—— 直击 G2（10–15 天）
 
 - `tools/catalog-builder`：从编辑器安装目录与 `origin_maps` 抽取并固化
   - `data/config/ObjectCategory.json` + `ObjWndTrans.json` + `ObjectCategory_<mod>.json`
-  - `data/objectScreenShot/*.jpg`（3041 张）
+  - `data/objectScreenShot/*.jpg`（3041 张，但**只能覆盖 482/1688 个物体**；见 S1 执行记录）
   - `data/objectsTemplate/*.object.bin`
   - `ScriptActionNew.json` + `ScriptConditonNew.json` + `scriptTrans.json`
   - 从 65 张精品图抽取"已使用过的对象/纹理组合""已验证地图片段"

@@ -52,6 +52,7 @@
 - 真实鸟瞰图（`preview.start` / `--export-overview`）需要外部 `WbLauncher.exe`（新地编启动器），路径通过 `--launcher` 参数或环境变量 `RA3_WB_LAUNCHER` 指定；缺失时文件编辑仍可用，仅真实渲染不可用。
 - 控制台脚本注意：本机只有 **Windows PowerShell 5.1**（无 pwsh 7）。无 BOM 的 `.ps1` 会被按 ANSI 读取而导致中文乱码与解析失败，仓库内 `scripts/*.ps1` 一律保存为 **UTF-8 with BOM**，且避免使用 .NET Core 专属 API（`ProcessStartInfo.ArgumentList`、`StandardInputEncoding`、`ConvertFrom-Json -Depth`）。
 - **改完 `.ps1` 要重新确认 BOM**：编辑工具写出的是**无 BOM** 的 UTF-8。含中文的 `scripts/*.ps1` 被编辑后 BOM 会丢失，PowerShell 5.1 随即按 ANSI 读取，报 `Unexpected token` 之类的解析错误（错误信息本身还会显示为乱码）。改完用 `[System.IO.File]::ReadAllBytes($p)[0..2]` 确认首字节是 `239,187,191`，不是就用 `[System.IO.File]::WriteAllText($p, (Get-Content $p -Raw), (New-Object System.Text.UTF8Encoding($true)))` 写回。
+- **协议层的 BOM 坑**：宿主曾因首条 JSONL 消息前缀的 UTF-8 BOM 而让**整个会话的第一个请求**必失败，错误信息是具有误导性的 `'0xEF' is an invalid start of a value`。现已由 `AgentJson.WithoutBom` 容忍（有测试）。写客户端或测试脚本时，注意 `function F($x, $args)` 这类把 `$args`（PowerShell 自动变量）当参数名的写法会让它变成数组，且 `$null = F ...` 会吞掉函数内所有 `Write-Output`。
 - **反方向的 BOM 坑**：`Set-Content -Encoding UTF8` 会**写出** BOM。外部工具的 JSON 配置不接受 BOM——给地编启动器的 `data/config/map-task-launch.json` 写配置时，用 `Set-Content` 会让渲染在 2 秒内失败并报 `'0xEF' is an invalid start of a value. LineNumber: 0`。写这类文件必须用 `[System.IO.File]::WriteAllText($path, $json, (New-Object System.Text.UTF8Encoding($false)))`，改完用 `[System.IO.File]::ReadAllBytes($path)[0..2]` 确认首字节不是 `239,187,191`。
 
 ## 3. 常用命令

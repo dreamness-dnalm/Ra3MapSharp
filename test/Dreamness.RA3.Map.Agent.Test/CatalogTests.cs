@@ -74,4 +74,62 @@ public class CatalogTests
         var result = await runtime.ExecuteAsync(new CommandRequest { Command = "assets.objects" });
         Assert.That(result.Error?.Code, Is.EqualTo("CATALOG_UNAVAILABLE"));
     }
+
+    [Test]
+    public async Task MissingAssetCatalogReturnsStructuredError()
+    {
+        await using var runtime = new AgentRuntime();
+        Assert.That((await runtime.ExecuteAsync(new CommandRequest { Command = "assets.catalog_info" })).Error?.Code,
+            Is.EqualTo("CATALOG_UNAVAILABLE"));
+        Assert.That((await runtime.ExecuteAsync(new CommandRequest { Command = "assets.search" })).Error?.Code,
+            Is.EqualTo("CATALOG_UNAVAILABLE"));
+    }
+
+    [Test]
+    public async Task AssetCatalogCommandsServeInfoAndSearch()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "ra3-assets-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var categoryPath = Path.Combine(root, "ObjectCategory.json");
+            await File.WriteAllTextAsync(categoryPath,
+                "[{\"englishName\":\"Trees\",\"chineseName\":\"树草\",\"subObjects\":[\"CC_Tree01\"]}]");
+            var screenshots = Path.Combine(root, "objectScreenShot");
+            Directory.CreateDirectory(screenshots);
+            await File.WriteAllBytesAsync(Path.Combine(screenshots, "CC_Tree01.jpg"), new byte[] { 1, 2, 3 });
+            var assets = AssetCatalog.Build(ObjectCatalog.Load(categoryPath),
+                ThumbnailIndex.ReadCategories(categoryPath), ThumbnailIndex.Scan(screenshots), DateTimeOffset.UnixEpoch);
+
+            await using var runtime = new AgentRuntime(assets: assets);
+            async Task<JsonElement> Call(string command, object args) => JsonSerializer.SerializeToElement(
+                (await runtime.ExecuteAsync(new CommandRequest
+                { Command = command, Arguments = JsonSerializer.SerializeToElement(args) })).Data, AgentJson.Options);
+
+            var info = await Call("assets.catalog_info", new { });
+            Assert.That(info.GetProperty("catalogHash").GetString(), Is.EqualTo(assets.CatalogHash));
+            Assert.That(info.GetProperty("counts").GetProperty("objects").GetInt32(), Is.EqualTo(1));
+            Assert.That(info.GetProperty("counts").GetProperty("textures").GetInt32(), Is.EqualTo(406));
+            Assert.That(info.GetProperty("thumbnails").GetProperty("objectsWithScreenshot").GetInt32(), Is.EqualTo(1));
+
+            var search = await Call("assets.search", new { surface = "Transition" });
+            Assert.That(search.GetProperty("kind").GetString(), Is.EqualTo("texture"),
+                "a surface filter implies textures and must not drag every object in");
+            Assert.That(search.GetProperty("objectMatches").GetInt32(), Is.Zero);
+            Assert.That(search.GetProperty("total").GetInt32(), Is.GreaterThan(0));
+
+            var objects = await Call("assets.search", new { kind = "object", category = "树草" });
+            Assert.That(objects.GetProperty("total").GetInt32(), Is.EqualTo(1));
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [Test]
+    public void WithoutBomDropsOnlyALeadingMarker()
+    {
+        Assert.That(AgentJson.WithoutBom("{\"a\":1}"), Is.EqualTo("{\"a\":1}"));
+        Assert.That(AgentJson.WithoutBom("\uFEFF{\"a\":1}"), Is.EqualTo("{\"a\":1}"));
+        Assert.That(AgentJson.WithoutBom(""), Is.EqualTo(""));
+        Assert.That(AgentJson.WithoutBom("\uFEFF"), Is.EqualTo(""));
+    }
 }
