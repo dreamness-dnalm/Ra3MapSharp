@@ -33,11 +33,26 @@ public sealed class AssetAlbum
     /// <summary>Side of the square crop, in grid cells, taken around each object.</summary>
     public int TileCells { get; set; }
 
+    /// <summary>
+    /// Search window used to find an object before cropping, in cells. Recorded so a later
+    /// footprint pass can re-detect objects exactly as the tiles were cropped.
+    /// </summary>
+    public int WindowCells { get; set; } = 8;
+
     /// <summary>Overview pixel width the crops were taken from.</summary>
     public int SourceImageEdge { get; set; }
 
     /// <summary>Edge length of the written tile images.</summary>
     public int TileEdge { get; set; }
+
+    /// <summary>
+    /// An object-free render of the same grid map. Footprint measurement diffs against it, which
+    /// is the only way to tell an object from the ground when the object covers most of the
+    /// window; the batches cannot stand in for it because they reuse the same positions.
+    /// </summary>
+    public string? ReferenceImagePath { get; set; }
+
+    public string? ReferenceImageHash { get; set; }
 
     public string AlbumHash { get; set; } = "";
 
@@ -56,8 +71,10 @@ public sealed class AssetAlbum
         GridCells,
         SpacingCells,
         TileCells,
+        WindowCells,
         SourceImageEdge,
         TileEdge,
+        ReferenceImageHash,
         Batches,
         Entries,
         Failures
@@ -103,6 +120,8 @@ public sealed class AssetAlbum
         gridCells = GridCells,
         spacingCells = SpacingCells,
         tileCells = TileCells,
+        windowCells = WindowCells,
+        referenceImage = ReferenceImagePath,
         sourceImageEdge = SourceImageEdge,
         tileEdge = TileEdge,
         images = Entries.Count,
@@ -113,7 +132,7 @@ public sealed class AssetAlbum
 
 /// <summary>One grid test map and the render taken from it.</summary>
 public sealed record AssetAlbumBatch(int Index, int Objects, string MapContentHash, string ImageHash,
-    string RendererConfigHash, string ImagePath);
+    string RendererConfigHash, string ImagePath, double[]? PixelToPlayableGrid = null);
 
 /// <summary>One rendered object tile, with the grid position it was placed at.</summary>
 public sealed record AssetAlbumEntry(string TypeName, string File, long Bytes, string ImageHash,

@@ -37,7 +37,8 @@ public sealed class CommandRegistry
         return handler;
     }
 
-    public static CommandRegistry CreateDefault(Catalog.ObjectCatalog? catalog = null)
+    public static CommandRegistry CreateDefault(Catalog.ObjectCatalog? catalog = null,
+        Catalog.FootprintCatalog? footprints = null)
     {
         var registry = new CommandRegistry();
         registry.Register(new CreateMapHandler());
@@ -64,7 +65,7 @@ public sealed class CommandRegistry
         registry.Register(new DeleteWaypointHandler());
         registry.Register(new PlayerStartHandler("starts.list"));
         registry.Register(new PlayerStartHandler("starts.place"));
-        registry.Register(new ScatterObjectsHandler(catalog));
+        registry.Register(new ScatterObjectsHandler(catalog, footprints));
         registry.Register(new AnalyzeObjectSpaceHandler());
         foreach (var name in new[] { "objects.query", "objects.place", "objects.move", "objects.delete", "objects.configure" })
             registry.Register(new ObjectHandler(name, catalog));

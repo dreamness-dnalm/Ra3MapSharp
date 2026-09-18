@@ -1,4 +1,87 @@
 {
+  "footprints.get": {
+    "description": "Return the measured placement footprint for one object type, with the render it was measured from.",
+    "argumentsSchema": {
+      "type": "object",
+      "properties": {
+        "typeName": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "typeName"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "footprints.list": {
+    "description": "Page the measured placement footprints, optionally filtered by name, source, or size.",
+    "argumentsSchema": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "rendered-extent",
+            "declared"
+          ]
+        },
+        "minCells": {
+          "type": "number",
+          "minimum": 0
+        },
+        "maxCells": {
+          "type": "number",
+          "minimum": 0
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 200,
+          "default": 50
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  "footprints.set": {
+    "description": "Record a hand-corrected footprint for one object type. Persisted separately so a rebuild of the measurements cannot erase it.",
+    "argumentsSchema": {
+      "type": "object",
+      "properties": {
+        "typeName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "widthCells": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 4096
+        },
+        "depthCells": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 4096
+        }
+      },
+      "required": [
+        "typeName",
+        "widthCells",
+        "depthCells"
+      ],
+      "additionalProperties": false
+    }
+  },
   "map.create": {
     "description": "Create a map with default water/light and no random starting waypoints.",
     "argumentsSchema": {

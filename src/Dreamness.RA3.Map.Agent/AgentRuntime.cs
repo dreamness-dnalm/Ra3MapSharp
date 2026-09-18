@@ -15,6 +15,8 @@ public sealed class AgentRuntime : IAsyncDisposable
     private readonly CommandRegistry _registry;
     private readonly ObjectCatalog? _catalog;
     private readonly AssetCatalog? _assets;
+    private readonly FootprintCatalog? _footprints;
+    private readonly string? _footprintOverridesPath;
     private readonly CommandExecutor _executor;
     private readonly WorldBuilderRenderer? _renderer;
     private readonly ConcurrentDictionary<string, RenderJob> _jobs = new();
@@ -25,12 +27,15 @@ public sealed class AgentRuntime : IAsyncDisposable
     private readonly string _diagnosticsRoot;
 
     public AgentRuntime(WorldBuilderRenderer? renderer = null, ObjectCatalog? catalog = null,
-        string? diagnosticsRoot = null, AssetCatalog? assets = null)
+        string? diagnosticsRoot = null, AssetCatalog? assets = null,
+        FootprintCatalog? footprints = null, string? footprintOverridesPath = null)
     {
         _diagnosticsRoot = diagnosticsRoot ?? Path.Combine(Environment.CurrentDirectory, "artifacts", "agent-diagnostics");
         _catalog = catalog;
         _assets = assets;
-        _registry = CommandRegistry.CreateDefault(catalog);
+        _footprints = footprints;
+        _footprintOverridesPath = footprintOverridesPath;
+        _registry = CommandRegistry.CreateDefault(catalog, footprints);
         _renderer = renderer;
         _executor = new CommandExecutor(_registry);
     }
@@ -49,8 +54,13 @@ public sealed class AgentRuntime : IAsyncDisposable
                 return Success(request, new
                 {
                     protocol = "ra3-agent-jsonl-v1", transports = new[] { "jsonl", "mcp-stdio-2025-06-18" }, commands = _registry.Describe(),
-                    hostCommands = new[] { "system.capabilities", "system.schema", "assets.objects", "assets.catalog_info", "assets.search", "assets.album", "map.inspect_file", "map.close", "preview.start", "preview.inspect", "diagnostics.render", "jobs.status", "jobs.cancel" },
+                    hostCommands = new[] { "system.capabilities", "system.schema", "assets.objects", "assets.catalog_info", "assets.search", "assets.album", "footprints.get", "footprints.list", "footprints.set", "map.inspect_file", "map.close", "preview.start", "preview.inspect", "diagnostics.render", "jobs.status", "jobs.cancel" },
                     objectCatalog = _catalog == null ? null : new { _catalog.SourcePath, _catalog.ContentHash, _catalog.Count, _catalog.Sources },
+                    footprints = _footprints == null ? null : new
+                    {
+                        _footprints.CatalogHash, measured = _footprints.Entries.Count,
+                        failures = _footprints.Failures.Count, _footprints.SourceAlbumHash
+                    },
                     assetCatalog = _assets == null ? null : new
                     {
                         _assets.CatalogHash, _assets.BuiltAtUtc,
@@ -85,6 +95,26 @@ public sealed class AgentRuntime : IAsyncDisposable
             {
                 if (_assets == null) throw MissingCatalog();
                 return Success(request, _assets.Search(Arguments<AssetSearchQuery>(request)));
+            }
+            if (request.Command is "footprints.get" or "footprints.list" or "footprints.set")
+            {
+                if (_footprints == null) throw new AutomationException("FOOTPRINT_UNAVAILABLE",
+                    "未加载占地目录。用 --build-footprints 生成后宿主会自动加载，或用 --footprints 指定。");
+                if (request.Command == "footprints.get")
+                {
+                    var get = Arguments<FootprintGetArguments>(request);
+                    if (string.IsNullOrWhiteSpace(get.TypeName))
+                        throw new AutomationException("INVALID_ARGUMENT", "typeName 必填。");
+                    var entry = _footprints.Find(get.TypeName!)
+                        ?? throw new AutomationException("FOOTPRINT_MISSING", "没有该物体的占地测量: " + get.TypeName);
+                    return Success(request, entry);
+                }
+                if (request.Command == "footprints.list")
+                    return Success(request, _footprints.List(Arguments<FootprintListQuery>(request)));
+                var set = Arguments<FootprintSetArguments>(request);
+                _footprints.SetOverride(set.TypeName ?? "", set.WidthCells, set.DepthCells);
+                PersistFootprintOverrides();
+                return Success(request, _footprints.Find(set.TypeName!)!);
             }
             if (request.Command == "assets.album")
             {
@@ -188,6 +218,22 @@ public sealed class AgentRuntime : IAsyncDisposable
         finally { if (entered) _renderGate.Release(); }
     }
 
+    /// <summary>Hand corrections live outside the generated catalogue so a rebuild cannot erase them.</summary>
+    private void PersistFootprintOverrides()
+    {
+        if (_footprintOverridesPath == null)
+            throw new AutomationException("INVALID_ARGUMENT", "宿主未配置占地覆盖文件，无法持久化。");
+        var overrides = new FootprintOverrides();
+        foreach (var entry in _footprints!.Entries.Values
+            .Where(e => e.Source == FootprintCatalog.SourceDeclared))
+            overrides.Entries[entry.TypeName] = new FootprintOverride(entry.WidthCells, entry.DepthCells);
+        var directory = Path.GetDirectoryName(_footprintOverridesPath);
+        if (!string.IsNullOrEmpty(directory)) Directory.CreateDirectory(directory);
+        var temporary = _footprintOverridesPath + ".tmp";
+        File.WriteAllBytes(temporary, JsonSerializer.SerializeToUtf8Bytes(overrides, AgentJson.Options));
+        File.Move(temporary, _footprintOverridesPath, overwrite: true);
+    }
+
     private static AutomationException MissingCatalog() => new("CATALOG_UNAVAILABLE",
         "未加载素材目录。先运行 --build-catalog 生成 catalog.json（Agent 会按 --artifacts 下的 catalog/catalog.json 自动加载），或用 --asset-catalog 指定。");
 
@@ -203,6 +249,13 @@ public sealed class AgentRuntime : IAsyncDisposable
     }
     private sealed class SchemaArguments { public string? Command { get; set; } }
     private sealed class AlbumArguments { public string? TypeName { get; set; } }
+    private sealed class FootprintGetArguments { public string? TypeName { get; set; } }
+    private sealed class FootprintSetArguments
+    {
+        public string? TypeName { get; set; }
+        public double WidthCells { get; set; }
+        public double DepthCells { get; set; }
+    }
     private sealed class FileInspectionArguments
     {
         public string Path { get; set; } = "";

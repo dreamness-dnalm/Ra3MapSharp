@@ -9,7 +9,9 @@ namespace Dreamness.RA3.Map.Automation.Commands.Objects;
 internal sealed class ScatterObjectsHandler : ICommandHandler
 {
     private readonly ObjectCatalog? _catalog;
-    public ScatterObjectsHandler(ObjectCatalog? catalog) => _catalog = catalog;
+    private readonly FootprintCatalog? _footprints;
+    public ScatterObjectsHandler(ObjectCatalog? catalog, FootprintCatalog? footprints = null)
+    { _catalog = catalog; _footprints = footprints; }
     public string Name => "objects.scatter";
     public CommandEffect Effect => CommandEffect.Mutation;
 
@@ -42,7 +44,23 @@ internal sealed class ScatterObjectsHandler : ICommandHandler
             excluded.UnionWith(zone.Region.Cells(map));
         var traversal = new TerrainTraversal(map, args.Profile, token);
         var border = map.MapBorderWidth;
-        var footprintSet = args.Footprints == null ? null : new ObjectFootprintSet(args.Footprints);
+        // Footprints used to be a per-call argument, so overlap checking was skipped unless the
+        // caller happened to have them. Prefer the measured catalogue and say which was used.
+        var footprints = args.Footprints;
+        var footprintSource = footprints == null ? (string?)null : "caller";
+        if (footprints == null && _footprints != null)
+        {
+            var needed = map.GetUnitObjects().Select(o => o.TypeName).Concat(args.TypeNames)
+                .Distinct(StringComparer.Ordinal);
+            // Only take over when every relevant type is measured; a partial set would reject
+            // the request for types that simply have no measurement yet.
+            if (_footprints.TryProfiles(needed, out var resolved))
+            {
+                footprints = resolved;
+                footprintSource = "catalog";
+            }
+        }
+        var footprintSet = footprints == null ? null : new ObjectFootprintSet(footprints);
         var occupied = new List<OrientedFootprintBox>();
         if (footprintSet != null)
         {
@@ -146,7 +164,8 @@ internal sealed class ScatterObjectsHandler : ICommandHandler
             algorithm = "lcg32-cell-jitter-v2", catalogHash = _catalog?.ContentHash,
             assetValidation = _catalog == null ? "unverified" : "editor-declared",
             exclusionModel = "whole-selected-cells", spacingModel = footprintSet == null ? "object-centers" : "object-centers-and-explicit-oriented-rectangles-v1",
-            footprintProfileHash = args.Footprints == null ? null : ContentHasher.HashBytes(JsonSerializer.SerializeToUtf8Bytes(args.Footprints, AutomationJson.Options)),
+            footprintSource,
+            footprintProfileHash = footprints == null ? null : ContentHasher.HashBytes(JsonSerializer.SerializeToUtf8Bytes(footprints, AutomationJson.Options)),
             notEvaluated = footprintSet == null ? new[] { "objectFootprints", "exactCollision", "gameMovementRules", "automaticGroundAttachment" }
                 : new[] { "profileAccuracy", "engineCollision", "miningBehavior", "gameMovementRules", "automaticGroundAttachment" },
             waterEvaluated = args.Profile.WaterLevel.HasValue });

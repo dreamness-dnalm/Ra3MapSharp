@@ -17,6 +17,9 @@ string? buildCatalogPath = null;
 string? screenshotsDirectory = null;
 string? buildAlbumPath = null;
 string? albumCatalogPath = null;
+string? buildFootprintsPath = null;
+string? footprintsCatalogPath = null;
+var footprintThreshold = 12;
 int? albumLimit = null;
 var albumOptions = new AlbumBuildCommand.Options();
 var albumAll = false;
@@ -44,6 +47,9 @@ for (var i = 0; i < args.Length; i++)
         case "--screenshots": screenshotsDirectory = args[++i]; break;
         case "--build-album": buildAlbumPath = args[++i]; break;
         case "--album": albumCatalogPath = args[++i]; break;
+        case "--build-footprints": buildFootprintsPath = args[++i]; break;
+        case "--footprints": footprintsCatalogPath = args[++i]; break;
+        case "--footprint-threshold": footprintThreshold = int.Parse(args[++i], System.Globalization.CultureInfo.InvariantCulture); break;
         case "--album-all": albumAll = true; break;
         case "--album-limit": albumLimit = int.Parse(args[++i], System.Globalization.CultureInfo.InvariantCulture); break;
         case "--album-grid": albumOptions.Grid = int.Parse(args[++i], System.Globalization.CultureInfo.InvariantCulture); break;
@@ -93,16 +99,30 @@ try
     var assetPath = assetCatalogPath ?? Dreamness.RA3.Map.Automation.Catalog.AssetCatalog.DefaultPath(artifacts);
     if (File.Exists(assetPath)) assets = Dreamness.RA3.Map.Automation.Catalog.AssetCatalog.Load(assetPath);
     else if (assetCatalogPath != null) { Console.Error.WriteLine("Asset catalogue not found: " + assetPath); return 2; }
-    if (assets != null)
-    {
-        // Optional on purpose: an album is an enhancement, never a prerequisite for editing.
-        var albumPath = albumCatalogPath ?? Dreamness.RA3.Map.Automation.Catalog.AssetAlbum.DefaultPath(artifacts);
-        if (File.Exists(albumPath)) assets.Album = Dreamness.RA3.Map.Automation.Catalog.AssetAlbum.Load(albumPath);
-        else if (albumCatalogPath != null) { Console.Error.WriteLine("Album not found: " + albumPath); return 2; }
-    }
 }
 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or AutomationException or InvalidOperationException)
 { Console.Error.WriteLine("Cannot load asset catalogue: " + ex.Message); return 2; }
+
+// The album and the footprints are loaded independently of the catalogue: measuring footprints
+// only needs the renders, so it must work even without a catalogue.
+Dreamness.RA3.Map.Automation.Catalog.AssetAlbum? album = null;
+try
+{
+    var albumPath = albumCatalogPath ?? Dreamness.RA3.Map.Automation.Catalog.AssetAlbum.DefaultPath(artifacts);
+    if (File.Exists(albumPath)) album = Dreamness.RA3.Map.Automation.Catalog.AssetAlbum.Load(albumPath);
+    else if (albumCatalogPath != null) { Console.Error.WriteLine("Album not found: " + albumPath); return 2; }
+    if (assets != null) assets.Album = album;
+}
+catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or AutomationException or InvalidOperationException)
+{ Console.Error.WriteLine("Cannot load album: " + ex.Message); return 2; }
+
+if (buildFootprintsPath != null)
+{
+    if (album == null) { Console.Error.WriteLine("--build-footprints needs an album; run --build-album first."); return 2; }
+    try { return await FootprintBuildCommand.RunAsync(album, buildFootprintsPath, CancellationToken.None, footprintThreshold); }
+    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or AutomationException or InvalidOperationException)
+    { Console.Error.WriteLine("Cannot build footprints: " + ex.Message); return 2; }
+}
 
 if (buildAlbumPath != null)
 {
@@ -118,7 +138,26 @@ if (buildAlbumPath != null)
     { Console.Error.WriteLine("Cannot build album: " + ex.Message); return 2; }
 }
 
-await using var runtime = new AgentRuntime(launcher == null ? null : new WorldBuilderRenderer(launcher, artifacts), catalog, Path.Combine(artifacts, "diagnostics"), assets);
+Dreamness.RA3.Map.Automation.Catalog.FootprintCatalog? footprints = null;
+try
+{
+    var footprintsPath = footprintsCatalogPath
+        ?? Dreamness.RA3.Map.Automation.Catalog.FootprintCatalog.DefaultPath(artifacts);
+    if (File.Exists(footprintsPath))
+    {
+        footprints = Dreamness.RA3.Map.Automation.Catalog.FootprintCatalog.Load(footprintsPath,
+            Dreamness.RA3.Map.Automation.Catalog.FootprintCatalog.DefaultOverridesPath(artifacts));
+    }
+    else if (footprintsCatalogPath != null) { Console.Error.WriteLine("Footprints not found: " + footprintsPath); return 2; }
+    if (assets != null) assets.Footprints = footprints;
+}
+catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or AutomationException or InvalidOperationException)
+{ Console.Error.WriteLine("Cannot load footprints: " + ex.Message); return 2; }
+
+await using var runtime = new AgentRuntime(
+    launcher == null ? null : new WorldBuilderRenderer(launcher, artifacts), catalog,
+    Path.Combine(artifacts, "diagnostics"), assets, footprints,
+    Dreamness.RA3.Map.Automation.Catalog.FootprintCatalog.DefaultOverridesPath(artifacts));
 if (mcp)
 {
     if (requests != null) { Console.Error.WriteLine("--mcp cannot be combined with --requests."); return 2; }

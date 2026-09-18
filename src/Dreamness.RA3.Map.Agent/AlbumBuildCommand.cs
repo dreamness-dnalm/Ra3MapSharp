@@ -79,6 +79,7 @@ internal static class AlbumBuildCommand
             GridCells = options.Grid,
             SpacingCells = options.Spacing,
             TileCells = options.TileCells,
+            WindowCells = options.WindowCells,
             SourceImageEdge = 2048,
             TileEdge = options.TileEdge
         };
@@ -86,6 +87,13 @@ internal static class AlbumBuildCommand
         await using var runtime = new AgentRuntime(
             new WorldBuilderRenderer(launcher, Path.Combine(artifacts, "album-render")),
             catalog, Path.Combine(artifacts, "album-diagnostics"), assets);
+
+        // Render the empty grid first: footprint measurement needs a ground image, and the
+        // batches cannot provide one because they reuse the same 25 positions per map.
+        var reference = await RenderReferenceAsync(runtime, options, mapRoot, token);
+        album.ReferenceImagePath = reference.Path;
+        album.ReferenceImageHash = reference.Hash;
+        Console.WriteLine($"  reference render {reference.Path}");
 
         var batches = targets.Chunk(positions.Count).ToArray();
         for (var batchIndex = 0; batchIndex < batches.Length; batchIndex++)
@@ -140,7 +148,7 @@ internal static class AlbumBuildCommand
             var image = await RenderAsync(runtime, session, revision, token);
             var tiles = await SliceAsync(image, placed, options, tileRoot, batchIndex, token);
             album.Batches.Add(new AssetAlbumBatch(batchIndex, placed.Count, image.MapContentHash,
-                image.ImageHash, image.RendererConfigHash, image.ImagePath));
+                image.ImageHash, image.RendererConfigHash, image.ImagePath, image.PixelToPlayableGrid));
             foreach (var tile in tiles) album.Entries[tile.TypeName] = tile;
 
             Console.WriteLine($"  batch {batchIndex + 1}/{batches.Length} [{mapName}] "
@@ -163,6 +171,28 @@ internal static class AlbumBuildCommand
                 Console.WriteLine($"    {group.Key}: {group.Count()}  e.g. {group.First().TypeName} - {group.First().Message}");
         }
         return 0;
+    }
+
+    private static async Task<(string Path, string Hash)> RenderReferenceAsync(AgentRuntime runtime,
+        Options options, string mapRoot, CancellationToken token)
+    {
+        const string mapName = "AlbumReference";
+        var parent = Path.Combine(mapRoot, mapName);
+        Directory.CreateDirectory(parent);
+        var created = await Required(runtime, "map.create", new
+        {
+            parentPath = parent, mapName,
+            playableWidth = options.Grid, playableHeight = options.Grid, border = 8
+        }, null, null, token);
+        var session = created.SessionId!;
+        var raised = await Required(runtime, "terrain.set_height", new
+        {
+            region = new { x = 0, y = 0, width = options.Grid, height = options.Grid },
+            height = options.LandHeight
+        }, session, created.RevisionAfter, token);
+        var saved = await Required(runtime, "map.save", new { compress = true }, session, raised.RevisionAfter, token);
+        var image = await RenderAsync(runtime, session, saved.RevisionAfter, token);
+        return (image.ImagePath, image.ImageHash);
     }
 
     private static List<(int X, int Y)> Positions(Options options)
@@ -228,7 +258,7 @@ internal static class AlbumBuildCommand
         foreach (var (typeName, gridX, gridY) in placed)
         {
             var (pixelX, pixelY) = GridToPixel(matrix, determinant, gridX, gridY);
-            var crop = FitToObject(image, pixelX, pixelY, window, fallback, minimum);
+            var crop = ObjectBlob.Locate(image, pixelX, pixelY, window, fallback, minimum).Crop;
             using var tile = image.Clone(context => context
                 .Crop(crop)
                 .Resize(options.TileEdge, options.TileEdge));
@@ -241,140 +271,6 @@ internal static class AlbumBuildCommand
                 gridX, gridY, batchIndex));
         }
         return entries;
-    }
-
-    /// <summary>
-    /// Finds the object's bounding box inside a window centred on its grid position.
-    /// <para>
-    /// A fixed crop cannot suit both a bench and a salvage ship, and there is no footprint data
-    /// to pick a size from. The test map is deliberately uniform, so the object is simply
-    /// whatever differs from the window's dominant colour, which frames small and large objects
-    /// alike. Flat decals that never stand out fall back to the centred tile.
-    /// </para>
-    /// </summary>
-    private static Rectangle FitToObject(Image<Rgba32> image, double centreX, double centreY,
-        int window, int fallback, int minimum)
-    {
-        var side = Math.Clamp(window, 1, Math.Min(image.Width, image.Height));
-        var left = Math.Clamp((int)Math.Round(centreX - side / 2.0), 0, image.Width - side);
-        var top = Math.Clamp((int)Math.Round(centreY - side / 2.0), 0, image.Height - side);
-
-        var histogram = new Dictionary<int, int>();
-        for (var y = top; y < top + side; y += 2)
-        {
-            for (var x = left; x < left + side; x += 2)
-            {
-                var pixel = image[x, y];
-                var key = (pixel.R >> 3 << 10) | (pixel.G >> 3 << 5) | (pixel.B >> 3);
-                histogram[key] = histogram.TryGetValue(key, out var count) ? count + 1 : 1;
-            }
-        }
-        if (histogram.Count == 0) return Centred(left, top, side, fallback);
-        var background = histogram.OrderByDescending(pair => pair.Value).First().Key;
-        var backR = ((background >> 10) & 31) << 3;
-        var backG = ((background >> 5) & 31) << 3;
-        var backB = (background & 31) << 3;
-
-        int minX = int.MaxValue, minY = int.MaxValue, maxX = -1, maxY = -1, marked = 0;
-        for (var y = top; y < top + side; y++)
-        {
-            for (var x = left; x < left + side; x++)
-            {
-                var pixel = image[x, y];
-                var difference = Math.Max(Math.Abs(pixel.R - backR),
-                    Math.Max(Math.Abs(pixel.G - backG), Math.Abs(pixel.B - backB)));
-                if (difference <= 24) continue;
-                marked++;
-                if (x < minX) minX = x;
-                if (y < minY) minY = y;
-                if (x > maxX) maxX = x;
-                if (y > maxY) maxY = y;
-            }
-        }
-
-        var coverage = (double)marked / (side * (double)side);
-        // Nothing stands out (a ground decal) or almost everything does (bad detection).
-        if (maxX < 0 || coverage < 0.002 || coverage > 0.9) return Centred(left, top, side, fallback);
-
-        // A bounding box over every marked pixel would swallow whatever neighbour or shadow
-        // reaches into the window, which is what made small props look tiny. Take the single
-        // blob nearest the centre instead: neighbours form their own components.
-        var mask = new bool[side * side];
-        for (var y = 0; y < side; y++)
-        {
-            for (var x = 0; x < side; x++)
-            {
-                var pixel = image[left + x, top + y];
-                mask[y * side + x] = Math.Max(Math.Abs(pixel.R - backR),
-                    Math.Max(Math.Abs(pixel.G - backG), Math.Abs(pixel.B - backB))) > 24;
-            }
-        }
-        var best = NearestComponent(mask, side, side / 2.0, side / 2.0);
-        if (best == null) return Centred(left, top, side, fallback);
-
-        var blob = best.Value;
-        var footprint = Math.Max(blob.Width, blob.Height);
-        var size = Math.Clamp((int)Math.Round(footprint * 1.35), Math.Min(minimum, side), side);
-        var objectCentreX = blob.X + blob.Width / 2.0;
-        var objectCentreY = blob.Y + blob.Height / 2.0;
-        return new Rectangle(
-            Math.Clamp(left + (int)Math.Round(objectCentreX - size / 2.0), 0, image.Width - size),
-            Math.Clamp(top + (int)Math.Round(objectCentreY - size / 2.0), 0, image.Height - size),
-            size, size);
-    }
-
-    /// <summary>
-    /// Bounding box of the marked component whose centre is closest to (<paramref name="centreX"/>,
-    /// <paramref name="centreY"/>), ignoring specks. Returns null when nothing qualifies.
-    /// </summary>
-    private static Rectangle? NearestComponent(bool[] mask, int side, double centreX, double centreY)
-    {
-        var visited = new bool[mask.Length];
-        var stack = new Stack<int>();
-        var minimumSize = Math.Max(4, (int)(mask.Length * 0.0004));
-        Rectangle? best = null;
-        var bestDistance = double.MaxValue;
-        for (var start = 0; start < mask.Length; start++)
-        {
-            if (!mask[start] || visited[start]) continue;
-            visited[start] = true;
-            stack.Push(start);
-            int minX = int.MaxValue, minY = int.MaxValue, maxX = -1, maxY = -1, count = 0;
-            while (stack.Count > 0)
-            {
-                var index = stack.Pop();
-                var x = index % side;
-                var y = index / side;
-                count++;
-                if (x < minX) minX = x;
-                if (y < minY) minY = y;
-                if (x > maxX) maxX = x;
-                if (y > maxY) maxY = y;
-                if (x > 0) Push(mask, visited, stack, index - 1);
-                if (x < side - 1) Push(mask, visited, stack, index + 1);
-                if (y > 0) Push(mask, visited, stack, index - side);
-                if (y < side - 1) Push(mask, visited, stack, index + side);
-            }
-            if (count < minimumSize) continue;
-            var distance = Math.Abs((minX + maxX) / 2.0 - centreX) + Math.Abs((minY + maxY) / 2.0 - centreY);
-            if (distance >= bestDistance) continue;
-            bestDistance = distance;
-            best = new Rectangle(minX, minY, maxX - minX + 1, maxY - minY + 1);
-        }
-        return best;
-    }
-
-    private static void Push(bool[] mask, bool[] visited, Stack<int> stack, int index)
-    {
-        if (!mask[index] || visited[index]) return;
-        visited[index] = true;
-        stack.Push(index);
-    }
-
-    private static Rectangle Centred(int left, int top, int side, int fallback)
-    {
-        var size = Math.Min(fallback, side);
-        return new Rectangle(left + (side - size) / 2, top + (side - size) / 2, size, size);
     }
 
     /// <summary>Inverts the renderer's affine pixel-to-grid matrix.</summary>

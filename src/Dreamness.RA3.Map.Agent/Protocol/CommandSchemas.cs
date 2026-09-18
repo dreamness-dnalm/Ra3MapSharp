@@ -22,7 +22,7 @@ public static class CommandSchemas
             var hasEffect = effects.TryGetValue(pair.Key, out var effect);
             var session = hasEffect ? effect != CommandEffect.Session : pair.Key is "map.close" or "preview.start" or "batch.execute" or "diagnostics.render";
             var revision = hasEffect && effect is CommandEffect.Mutation or CommandEffect.History or CommandEffect.Export || pair.Key == "batch.execute";
-            var readOnly = hasEffect ? effect == CommandEffect.Query : pair.Key is "system.capabilities" or "system.schema" or "assets.objects" or "assets.catalog_info" or "assets.search" or "assets.album" or "jobs.status";
+            var readOnly = hasEffect ? effect == CommandEffect.Query : pair.Key is "system.capabilities" or "system.schema" or "assets.objects" or "assets.catalog_info" or "assets.search" or "assets.album" or "footprints.get" or "footprints.list" or "jobs.status";
             if (pair.Key is "edits.prepare" or "edits.discard" or "design.prepare") readOnly = false;
             var required = new List<string>();
             if (session) required.Add("sessionId");

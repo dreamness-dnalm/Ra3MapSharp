@@ -62,6 +62,10 @@ public sealed class AssetCatalog
     [JsonIgnore]
     public AssetAlbum? Album { get; set; }
 
+    /// <summary>Measured footprints, attached by the host like the album so search can report size.</summary>
+    [JsonIgnore]
+    public FootprintCatalog? Footprints { get; set; }
+
     private static readonly JsonSerializerOptions Json = AutomationJson.CompactOptions;
 
     public static AssetCatalog Build(ObjectCatalog objects, IReadOnlyList<AssetCategory> categories,
@@ -186,7 +190,7 @@ public sealed class AssetCatalog
                 .Where(t => string.IsNullOrWhiteSpace(query.Theme) || t.Theme.Equals(query.Theme, StringComparison.OrdinalIgnoreCase))
                 .Where(t => !query.OnlyTransition || t.IsTransition)
                 .Select(t => new AssetSearchItem("texture", t.Name, null, t.Surface, t.Theme, t.Variant, t.Kind,
-                    t.IsTransition, t.IsStructure, false, null, false, null)));
+                    t.IsTransition, t.IsStructure, false, null, false, null, null, null)));
         }
         if (kind is not "texture")
         {
@@ -200,7 +204,9 @@ public sealed class AssetCatalog
                 .Select(o => new AssetSearchItem("object", o.TypeName, o.Categories, null, null, null, null,
                     null, null, o.HasEditorScreenshot, o.HasEditorScreenshot ? o.TypeName + ".jpg" : null,
                     Album != null && Album.Entries.ContainsKey(o.TypeName),
-                    Album != null && Album.Entries.TryGetValue(o.TypeName, out var tile) ? tile.File : null)));
+                    Album != null && Album.Entries.TryGetValue(o.TypeName, out var tile) ? tile.File : null,
+                    Footprints?.Find(o.TypeName)?.WidthCells,
+                    Footprints?.Find(o.TypeName)?.DepthCells)));
         }
 
         var ordered = items.OrderBy(i => i.Kind, StringComparer.Ordinal).ThenBy(i => i.Name, StringComparer.Ordinal).ToArray();
@@ -228,7 +234,8 @@ public sealed class AssetCatalog
 /// <summary>One search hit. A single shape keeps the contract stable across kinds.</summary>
 public sealed record AssetSearchItem(string Kind, string Name, IReadOnlyList<string>? Categories,
     string? Surface, string? Theme, int? Variant, string? SurfaceKind, bool? IsTransition, bool? IsStructure,
-    bool HasEditorScreenshot, string? Thumbnail, bool HasAlbum, string? AlbumFile);
+    bool HasEditorScreenshot, string? Thumbnail, bool HasAlbum, string? AlbumFile,
+    double? FootprintWidthCells, double? FootprintDepthCells);
 
 public sealed class AssetSearchQuery
 {
