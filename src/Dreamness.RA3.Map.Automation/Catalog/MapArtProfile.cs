@@ -279,23 +279,29 @@ public static class ArtRubric
             Source("objectsPer1000Cells"),
             "装饰密度；对 500x500 图约 " + (densityLow == null ? "?" : $"{densityLow * 250:0}-{densityHigh * 250:0}") + " 个物体"));
 
+        // Clumping judges grid-vs-cluster, not "must sit in the official interquartile".
+        // Corpus min is ~1.42 and P25 is ~2.39; clustered scatter can land in that gap.
         var clumpFloor = Threshold("clumpingIndex", 0.25);
-        checks.Add(Judge("clumping", profile.ClumpingIndex,
-            clumpFloor, 1.0,
-            $"至少 {clumpFloor:0.##}（语料 P25；约 1 为随机，小于 1 为规则排布）", Source("clumpingIndex"),
-            "聚簇程度；规则网格散布会明显低于 1"));
+        var clumpVerdict = clumpFloor == null ? NotEvaluated
+            : profile.ClumpingIndex < 1.0 ? Fail
+            : profile.ClumpingIndex < clumpFloor ? Descriptive
+            : Pass;
+        checks.Add(new ArtRubricCheck("clumping", clumpVerdict,
+            Math.Round(profile.ClumpingIndex, 4),
+            clumpFloor == null ? "-"
+                : $"明显低于 1 才失败；1–{clumpFloor:0.##} 仅报告（语料 P25 {clumpFloor:0.##}）",
+            Source("clumpingIndex"),
+            "聚簇程度。约 1 为独立散布，小于 1 为规则网格。"
+                + "成群散布后仍可能略低于语料 P25（语料最低约 1.42），故 1 到 P25 只报告、不判分"));
 
         checks.Add(new ArtRubricCheck("materialCohesion", Descriptive,
             profile.Patches.LargestPatchShare, "仅报告", Source("largestPatchShare"),
             "最大连通块占该材质面积的比例。实测 shipped 地图本身就偏碎（斑块中位仅 4 格），"
                 + "且拼贴图落在此指标的语料带内，故只报告不判分"));
 
-        // Measured against the corpus this is the check that sees a stamped map: shipped
-        // boundaries are ragged (median 560, P25 320), while material stamped as discs lands
-        // near the theoretical disc value. The first two shape metrics I tried did not
-        // discriminate at all — shipped maps are more fragmented than assumed, so a patch-size
-        // or largest-patch check passed a map covered in circles. Only the check enforces a
-        // floor; an implausibly ragged map would pass it.
+        // Compactness once looked like the stamp detector, then failed validation:
+        // contour-following maps scored 34 while disc-stamped maps scored 159.
+        // It stays visible as a measurement and must not decide the verdict.
         checks.Add(new ArtRubricCheck("patchNaturalness", Descriptive,
             profile.Patches.MeanCompactness, "仅报告", Source("meanCompactness"),
             "斑块紧凑度（周长^2/面积，正圆约 12.6）。**不再判分**：实测跟着地形等高线走的图得 34，"
@@ -304,10 +310,12 @@ public static class ArtRubric
 
         var landmarkKinds = LandmarkCategories.Count(category =>
             profile.Categories.TryGetValue(category, out var count) && count >= 3);
-        checks.Add(new ArtRubricCheck("landmarkPresence", landmarkKinds >= 3 ? Pass : landmarkKinds == 2 ? Warn : Fail,
+        checks.Add(new ArtRubricCheck("landmarkPresence", Descriptive,
             landmarkKinds,
-            "至少 3 类、每类至少 3 个（Roadmap S2 验收条件，非语料统计）",
-            "Roadmap S2 验收条件", "可辨识地标数量"));
+            "建议有可辨识地标（构图建议，不判分）",
+            "构图建议（非语料统计；原 Roadmap S2「3 类×每类 3 个」已降级）",
+            "统计的是 8 个目录分类里件数≥3 的种类数，不是视觉地标，也受占地覆盖不全影响。"
+                + "只报告，不决定判决。制作上仍应在路口/高地/岸线拐点放置地标"));
 
         // Not decidable from statistics, and saying so beats inventing a proxy.
         checks.Add(new ArtRubricCheck("combatReadability", NotEvaluated, null, "-",

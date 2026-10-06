@@ -111,6 +111,24 @@ SCHEMAS["terrain.analyze"]["description"] = "Analyze current or prepared terrain
 add("objects.scatter", "Deterministic region scatter with center spacing, exclusions and terrain filtering. Optional footprints require all existing and new types; reject footprint overlap, boundary and blocked terrain/exclusion intersections. Rejects partial placement.",
     dict(region=REGION, profile=PROFILE, seed=I, count=scalar("integer", minimum=1, maximum=2000), typeNames=array(S, 1, 64),
          minDistanceCells=scalar("number", minimum=1, default=2), exclusions=array(REGION), catalogHash=S, footprints=FOOTPRINTS), ["region", "profile", "seed", "count", "typeNames"])
+CLIFF_DETECTION = dict(region=REGION, minDrop=scalar("number", exclusiveMinimum=0, default=20),
+    minSlopeDegrees=scalar("number", exclusiveMinimum=0, exclusiveMaximum=90, default=60))
+add("terrain.detect_cliffs", "Detect directed dual-grid height discontinuity lines, high ground on the left. Coordinates are playableGrid; does not infer wide steep slopes or engine cliff flags.", CLIFF_DETECTION, ["region"])
+CLIFF_PIECE = obj(dict(typeName=scalar("string", minLength=1, maxLength=256),
+    role=scalar("string", enum=["straight", "outerCorner", "innerCorner"], default="straight"),
+    lengthCells=scalar("number", minimum=.25, maximum=4096), depthCells=scalar("number", exclusiveMinimum=0, maximum=4096),
+    angleOffsetDegrees=scalar("number", minimum=-360, maximum=360, default=0),
+    normalOffsetCells=scalar("number", minimum=-128, maximum=128, default=0),
+    originOffsetAlongCells=scalar("number", minimum=-128, maximum=128, default=0),
+    originOffsetNormalCells=scalar("number", minimum=-128, maximum=128, default=0),
+    zOffset=scalar("number", minimum=-4096, maximum=4096, default=0)), ["typeName"])
+add("objects.place_cliffs", "Place cliff decoration along detected seams with deterministic variation. Style length/depth are seam-aligned cells, required unless measured. Positive normal offset points uphill; origin offsets correct model pivots independently of coverage. Object Z is terrain-relative: baseHeight terrain uses zOffset directly; low/high convert absolute target to an offset using bilinear terrain sampling. Skips blocked/bent spans and returns counts. Supports prepared edits and undo; visual model fit needs calibration.",
+    dict(CLIFF_DETECTION, style=obj(dict(name=scalar("string", minLength=1, maxLength=128), pieces=array(CLIFF_PIECE, 1, 64)), ["name", "pieces"]),
+        seed=I, gapCells=scalar("number", minimum=0, maximum=128, default=0),
+        maxBendDegrees=scalar("number", minimum=0, maximum=180, default=50),
+        maxObjects=scalar("integer", minimum=1, maximum=2000, default=2000),
+        avoidExisting=scalar("boolean", default=True), baseHeight=scalar("string", enum=["terrain", "low", "high"], default="terrain"),
+        exclusions=array(REGION), catalogHash=S), ["region", "style", "seed"])
 add("protections.add", "Protect selected layers; removal and edits cannot bypass protection in the same batch.",
     dict(id=scalar("string", minLength=1, maxLength=128), region=REGION, layers=array(scalar("string", enum=["terrain", "textures", "passability", "objects"]), 1, 4)), ["id", "region", "layers"])
 add("protections.remove", "Remove protection by id; use a separate transaction before changing that region.", dict(id=S), ["id"])
@@ -124,7 +142,7 @@ add("preview.inspect", "Return a verified overview or pixel crop with coordinate
 for command in ["jobs.status", "jobs.cancel"]:
     add(command, "Query or cancel a render job created by this host.", dict(jobId=S), ["jobId"])
 mutations = [key for key in SCHEMAS if key in ["terrain.set_height", "terrain.sculpt", "terrain.smooth", "terrain.ramp", "terrain.rebuild_passability", "texture.paint",
-    "waypoints.place", "waypoints.move", "waypoints.delete", "starts.place", "objects.place", "objects.move", "objects.delete", "objects.configure", "objects.scatter", "protections.add", "protections.remove"]]
+    "waypoints.place", "waypoints.move", "waypoints.delete", "starts.place", "objects.place", "objects.move", "objects.delete", "objects.configure", "objects.scatter", "objects.place_cliffs", "protections.add", "protections.remove"]]
 subcommands = [obj(dict(command=scalar("string", enum=[name]), commandVersion=scalar("integer", enum=[1], default=1),
                        arguments=SCHEMAS[name]["argumentsSchema"]), ["command", "arguments"]) for name in mutations]
 add("batch.execute", "Execute up to 100 mutation commands as one transaction and revision; all-or-nothing.",

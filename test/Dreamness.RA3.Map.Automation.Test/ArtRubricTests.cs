@@ -63,7 +63,7 @@ public class ArtRubricTests
     [Test]
     public void AnEvenlyPlacedScatterFailsTheClumpingRule()
     {
-        // A min-distance scatter lands below 1; the corpus says good maps sit near 3.
+        // A min-distance scatter lands below 1 (regular/even); that remains a fail.
         var result = ArtRubric.Evaluate(Profile(clumping: 0.92), Rules());
         Assert.That(Verdict(result, "clumping"), Is.EqualTo(ArtRubric.Fail));
     }
@@ -79,7 +79,8 @@ public class ArtRubricTests
         var stamped = ArtRubric.Evaluate(Profile(cohesion: 0.18, compactness: 158.73), Rules());
         Assert.That(Verdict(stamped, "materialCohesion"), Is.EqualTo(ArtRubric.Descriptive));
         Assert.That(Verdict(stamped, "patchNaturalness"), Is.EqualTo(ArtRubric.Descriptive));
-        Assert.That(stamped.Descriptive, Is.EqualTo(2));
+        Assert.That(stamped.Descriptive, Is.EqualTo(3),
+            "shape checks and landmarks are reported, none of them decide");
         Assert.That(stamped.Verdict, Is.EqualTo("pass"), "no amount is out of range, and shape does not decide");
         Assert.That(stamped.Checks.Single(c => c.Id == "patchNaturalness").Measured, Is.EqualTo(158.73),
             "the number is still reported so a human can look at it");
@@ -94,14 +95,32 @@ public class ArtRubricTests
     }
 
     [Test]
-    public void DensityOutsideTheBandFailsAndLandmarksAreCounted()
+    public void DensityOutsideTheBandFails()
     {
         Assert.That(Verdict(ArtRubric.Evaluate(Profile(density: 4), Rules()), "decorationDensity"),
             Is.EqualTo(ArtRubric.Fail));
-        Assert.That(Verdict(ArtRubric.Evaluate(Profile(landmarkKinds: 0), Rules()), "landmarkPresence"),
-            Is.EqualTo(ArtRubric.Fail));
-        Assert.That(Verdict(ArtRubric.Evaluate(Profile(landmarkKinds: 3), Rules()), "landmarkPresence"),
-            Is.EqualTo(ArtRubric.Pass));
+    }
+
+    [Test]
+    public void ClumpingBetweenOneAndCorpusP25IsReportedOnly()
+    {
+        var result = ArtRubric.Evaluate(Profile(clumping: 1.96), Rules());
+        Assert.That(Verdict(result, "clumping"), Is.EqualTo(ArtRubric.Descriptive));
+        Assert.That(result.Verdict, Is.EqualTo("pass"),
+            "clustered-but-below-P25 must not force iteration");
+    }
+
+    [Test]
+    public void LandmarkCountIsAdvisoryAndDoesNotDecide()
+    {
+        var none = ArtRubric.Evaluate(Profile(landmarkKinds: 0), Rules());
+        var some = ArtRubric.Evaluate(Profile(landmarkKinds: 1), Rules());
+        var many = ArtRubric.Evaluate(Profile(landmarkKinds: 3), Rules());
+        Assert.That(Verdict(none, "landmarkPresence"), Is.EqualTo(ArtRubric.Descriptive));
+        Assert.That(Verdict(some, "landmarkPresence"), Is.EqualTo(ArtRubric.Descriptive));
+        Assert.That(Verdict(many, "landmarkPresence"), Is.EqualTo(ArtRubric.Descriptive));
+        Assert.That(none.Verdict, Is.EqualTo("pass"));
+        Assert.That(some.Checks.Single(c => c.Id == "landmarkPresence").Measured, Is.EqualTo(1));
     }
 
     [Test]
@@ -109,9 +128,10 @@ public class ArtRubricTests
     {
         var result = ArtRubric.Evaluate(Profile(top: 0.95, clumping: 0.2), null);
         Assert.That(result.Verdict, Is.EqualTo("pass"), "no thresholds means no failures, not invented ones");
-        Assert.That(result.NotEvaluated + result.Descriptive, Is.EqualTo(result.Checks.Count - 1),
-            "without thresholds everything is either unevaluated or descriptive, except the roadmap landmark rule");
-        Assert.That(result.Descriptive, Is.EqualTo(2), "the two shape checks are descriptive regardless of rules");
+        Assert.That(result.NotEvaluated + result.Descriptive, Is.EqualTo(result.Checks.Count),
+            "without thresholds everything is either unevaluated or descriptive");
+        Assert.That(result.Descriptive, Is.EqualTo(3),
+            "shape checks and landmarks are descriptive regardless of rules");
         Assert.That(Verdict(result, "dominantMaterialShare"), Is.EqualTo(ArtRubric.NotEvaluated));
         Assert.That(result.Checks.All(check => check.Source.Length > 0), Is.True,
             "each check names where its threshold came from");

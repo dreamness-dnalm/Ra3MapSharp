@@ -58,6 +58,23 @@ public class McpTests
     }
 
     [Test]
+    public void CliffSchemasValidateStyleAndExposeMutationInPreparedEdits()
+    {
+        var args = Json(new { region = new { x = 0, y = 0, width = 32, height = 24 }, seed = 1,
+            style = new { name = "rock", pieces = new[] { new { typeName = "TestCliff", lengthCells = 2, depthCells = 1 } } } });
+        var schema = CommandSchemas.Definitions["objects.place_cliffs"].GetProperty("argumentsSchema");
+        Assert.DoesNotThrow(() => CommandSchemas.Validate(args, schema));
+        Assert.Throws<ArgumentException>(() => CommandSchemas.Validate(Json(new { region = new { x = 0, y = 0, width = 32, height = 24 },
+            seed = 1, style = new { name = "rock", pieces = new[] { new { typeName = "TestCliff", lengthCells = 0 } } } }), schema));
+        Assert.DoesNotThrow(() => CommandSchemas.Validate(Json(new { baseRevision = 0,
+            commands = new[] { new { command = "objects.place_cliffs", arguments = args } } }),
+            CommandSchemas.Definitions["edits.prepare"].GetProperty("argumentsSchema")));
+        var tool = CommandSchemas.Tools().Select(Json).Single(t => t.GetProperty("name").GetString() == "ra3_objects_place_cliffs");
+        Assert.That(tool.GetProperty("annotations").GetProperty("readOnlyHint").GetBoolean(), Is.False);
+        Assert.That(tool.GetProperty("inputSchema").GetProperty("required").EnumerateArray().Select(v => v.GetString()), Does.Contain("expectedRevision"));
+    }
+
+    [Test]
     public void SchemasRejectNestedInvalidShapesAndUnknownArguments()
     {
         var schema = CommandSchemas.Definitions["objects.scatter"].GetProperty("argumentsSchema");

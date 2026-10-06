@@ -1306,18 +1306,42 @@
           "items": {
             "type": "object",
             "properties": {
-              "maxHeight": { "type": "number" },
-              "texture": { "type": "string" },
-              "textureNames": { "type": "array", "minItems": 1, "maxItems": 8, "items": { "type": "string" } },
-              "variantBlockCells": { "type": "integer", "minimum": 4, "maximum": 256, "default": 24 }
+              "maxHeight": {
+                "type": "number"
+              },
+              "texture": {
+                "type": "string"
+              },
+              "textureNames": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 8,
+                "items": {
+                  "type": "string"
+                }
+              },
+              "variantBlockCells": {
+                "type": "integer",
+                "minimum": 4,
+                "maximum": 256,
+                "default": 24
+              }
             },
-            "required": [ "maxHeight" ],
+            "required": [
+              "maxHeight"
+            ],
             "additionalProperties": false
           }
         },
-        "autoBlend": { "type": "boolean", "default": true }
+        "autoBlend": {
+          "type": "boolean",
+          "default": true
+        }
       },
-      "required": [ "region", "bands" ],
+      "required": [
+        "region",
+        "bands"
+      ],
       "additionalProperties": false
     }
   },
@@ -2723,8 +2747,7 @@
           },
           "minItems": 1,
           "maxItems": 256
-        }
-      ,
+        },
         "clusters": {
           "type": "integer",
           "minimum": 0,
@@ -2743,7 +2766,8 @@
           "minimum": 2,
           "maximum": 512,
           "default": 40
-        }},
+        }
+      },
       "required": [
         "region",
         "profile",
@@ -5070,6 +5094,428 @@
                   "arguments"
                 ],
                 "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "command": {
+                    "type": "string",
+                    "enum": [
+                      "objects.place_cliffs"
+                    ]
+                  },
+                  "commandVersion": {
+                    "type": "integer",
+                    "enum": [
+                      1
+                    ],
+                    "default": 1
+                  },
+                  "arguments": {
+                    "type": "object",
+                    "properties": {
+                      "region": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "rectangle"
+                                ],
+                                "default": "rectangle"
+                              },
+                              "space": {
+                                "type": "string",
+                                "enum": [
+                                  "playableGrid",
+                                  "mapGrid"
+                                ],
+                                "default": "playableGrid"
+                              },
+                              "x": {
+                                "type": "integer"
+                              },
+                              "y": {
+                                "type": "integer"
+                              },
+                              "width": {
+                                "type": "integer",
+                                "minimum": 1
+                              },
+                              "height": {
+                                "type": "integer",
+                                "minimum": 1
+                              }
+                            },
+                            "required": [
+                              "x",
+                              "y",
+                              "width",
+                              "height"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "circle"
+                                ]
+                              },
+                              "space": {
+                                "type": "string",
+                                "enum": [
+                                  "playableGrid",
+                                  "mapGrid"
+                                ],
+                                "default": "playableGrid"
+                              },
+                              "centerX": {
+                                "type": "number"
+                              },
+                              "centerY": {
+                                "type": "number"
+                              },
+                              "radius": {
+                                "type": "number",
+                                "exclusiveMinimum": 0
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "centerX",
+                              "centerY",
+                              "radius"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "polygon"
+                                ]
+                              },
+                              "space": {
+                                "type": "string",
+                                "enum": [
+                                  "playableGrid",
+                                  "mapGrid"
+                                ],
+                                "default": "playableGrid"
+                              },
+                              "vertices": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "x": {
+                                      "type": "number"
+                                    },
+                                    "y": {
+                                      "type": "number"
+                                    }
+                                  },
+                                  "required": [
+                                    "x",
+                                    "y"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "minItems": 3,
+                                "maxItems": 64
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "vertices"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      },
+                      "minDrop": {
+                        "type": "number",
+                        "exclusiveMinimum": 0,
+                        "default": 20
+                      },
+                      "minSlopeDegrees": {
+                        "type": "number",
+                        "exclusiveMinimum": 0,
+                        "exclusiveMaximum": 90,
+                        "default": 60
+                      },
+                      "style": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 128
+                          },
+                          "pieces": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "typeName": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 256
+                                },
+                                "lengthCells": {
+                                  "type": "number",
+                                  "minimum": 0.25,
+                                  "maximum": 4096
+                                },
+                                "depthCells": {
+                                  "type": "number",
+                                  "exclusiveMinimum": 0,
+                                  "maximum": 4096
+                                },
+                                "angleOffsetDegrees": {
+                                  "type": "number",
+                                  "minimum": -360,
+                                  "maximum": 360,
+                                  "default": 0
+                                },
+                                "normalOffsetCells": {
+                                  "type": "number",
+                                  "minimum": -128,
+                                  "maximum": 128,
+                                  "default": 0
+                                },
+                                "zOffset": {
+                                  "type": "number",
+                                  "minimum": -4096,
+                                  "maximum": 4096,
+                                  "default": 0
+                                },
+                                "originOffsetAlongCells": {
+                                  "type": "number",
+                                  "minimum": -128,
+                                  "maximum": 128,
+                                  "default": 0
+                                },
+                                "originOffsetNormalCells": {
+                                  "type": "number",
+                                  "minimum": -128,
+                                  "maximum": 128,
+                                  "default": 0
+                                },
+                                "role": {
+                                  "type": "string",
+                                  "enum": [
+                                    "straight",
+                                    "outerCorner",
+                                    "innerCorner"
+                                  ],
+                                  "default": "straight"
+                                }
+                              },
+                              "required": [
+                                "typeName"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "minItems": 1,
+                            "maxItems": 64
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "pieces"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "seed": {
+                        "type": "integer"
+                      },
+                      "gapCells": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 128,
+                        "default": 0
+                      },
+                      "maxBendDegrees": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 180,
+                        "default": 50
+                      },
+                      "maxObjects": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 2000,
+                        "default": 2000
+                      },
+                      "avoidExisting": {
+                        "type": "boolean",
+                        "default": true
+                      },
+                      "baseHeight": {
+                        "type": "string",
+                        "enum": [
+                          "terrain",
+                          "low",
+                          "high"
+                        ],
+                        "default": "terrain"
+                      },
+                      "exclusions": {
+                        "type": "array",
+                        "items": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "enum": [
+                                    "rectangle"
+                                  ],
+                                  "default": "rectangle"
+                                },
+                                "space": {
+                                  "type": "string",
+                                  "enum": [
+                                    "playableGrid",
+                                    "mapGrid"
+                                  ],
+                                  "default": "playableGrid"
+                                },
+                                "x": {
+                                  "type": "integer"
+                                },
+                                "y": {
+                                  "type": "integer"
+                                },
+                                "width": {
+                                  "type": "integer",
+                                  "minimum": 1
+                                },
+                                "height": {
+                                  "type": "integer",
+                                  "minimum": 1
+                                }
+                              },
+                              "required": [
+                                "x",
+                                "y",
+                                "width",
+                                "height"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "enum": [
+                                    "circle"
+                                  ]
+                                },
+                                "space": {
+                                  "type": "string",
+                                  "enum": [
+                                    "playableGrid",
+                                    "mapGrid"
+                                  ],
+                                  "default": "playableGrid"
+                                },
+                                "centerX": {
+                                  "type": "number"
+                                },
+                                "centerY": {
+                                  "type": "number"
+                                },
+                                "radius": {
+                                  "type": "number",
+                                  "exclusiveMinimum": 0
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "centerX",
+                                "centerY",
+                                "radius"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "enum": [
+                                    "polygon"
+                                  ]
+                                },
+                                "space": {
+                                  "type": "string",
+                                  "enum": [
+                                    "playableGrid",
+                                    "mapGrid"
+                                  ],
+                                  "default": "playableGrid"
+                                },
+                                "vertices": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "x": {
+                                        "type": "number"
+                                      },
+                                      "y": {
+                                        "type": "number"
+                                      }
+                                    },
+                                    "required": [
+                                      "x",
+                                      "y"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "minItems": 3,
+                                  "maxItems": 64
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "vertices"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        },
+                        "minItems": 0,
+                        "maxItems": 100
+                      },
+                      "catalogHash": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "region",
+                      "style",
+                      "seed"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "command",
+                  "arguments"
+                ],
+                "additionalProperties": false
               }
             ]
           },
@@ -6950,6 +7396,428 @@
                   "arguments"
                 ],
                 "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "command": {
+                    "type": "string",
+                    "enum": [
+                      "objects.place_cliffs"
+                    ]
+                  },
+                  "commandVersion": {
+                    "type": "integer",
+                    "enum": [
+                      1
+                    ],
+                    "default": 1
+                  },
+                  "arguments": {
+                    "type": "object",
+                    "properties": {
+                      "region": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "rectangle"
+                                ],
+                                "default": "rectangle"
+                              },
+                              "space": {
+                                "type": "string",
+                                "enum": [
+                                  "playableGrid",
+                                  "mapGrid"
+                                ],
+                                "default": "playableGrid"
+                              },
+                              "x": {
+                                "type": "integer"
+                              },
+                              "y": {
+                                "type": "integer"
+                              },
+                              "width": {
+                                "type": "integer",
+                                "minimum": 1
+                              },
+                              "height": {
+                                "type": "integer",
+                                "minimum": 1
+                              }
+                            },
+                            "required": [
+                              "x",
+                              "y",
+                              "width",
+                              "height"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "circle"
+                                ]
+                              },
+                              "space": {
+                                "type": "string",
+                                "enum": [
+                                  "playableGrid",
+                                  "mapGrid"
+                                ],
+                                "default": "playableGrid"
+                              },
+                              "centerX": {
+                                "type": "number"
+                              },
+                              "centerY": {
+                                "type": "number"
+                              },
+                              "radius": {
+                                "type": "number",
+                                "exclusiveMinimum": 0
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "centerX",
+                              "centerY",
+                              "radius"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "polygon"
+                                ]
+                              },
+                              "space": {
+                                "type": "string",
+                                "enum": [
+                                  "playableGrid",
+                                  "mapGrid"
+                                ],
+                                "default": "playableGrid"
+                              },
+                              "vertices": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "x": {
+                                      "type": "number"
+                                    },
+                                    "y": {
+                                      "type": "number"
+                                    }
+                                  },
+                                  "required": [
+                                    "x",
+                                    "y"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "minItems": 3,
+                                "maxItems": 64
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "vertices"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      },
+                      "minDrop": {
+                        "type": "number",
+                        "exclusiveMinimum": 0,
+                        "default": 20
+                      },
+                      "minSlopeDegrees": {
+                        "type": "number",
+                        "exclusiveMinimum": 0,
+                        "exclusiveMaximum": 90,
+                        "default": 60
+                      },
+                      "style": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 128
+                          },
+                          "pieces": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "typeName": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 256
+                                },
+                                "lengthCells": {
+                                  "type": "number",
+                                  "minimum": 0.25,
+                                  "maximum": 4096
+                                },
+                                "depthCells": {
+                                  "type": "number",
+                                  "exclusiveMinimum": 0,
+                                  "maximum": 4096
+                                },
+                                "angleOffsetDegrees": {
+                                  "type": "number",
+                                  "minimum": -360,
+                                  "maximum": 360,
+                                  "default": 0
+                                },
+                                "normalOffsetCells": {
+                                  "type": "number",
+                                  "minimum": -128,
+                                  "maximum": 128,
+                                  "default": 0
+                                },
+                                "zOffset": {
+                                  "type": "number",
+                                  "minimum": -4096,
+                                  "maximum": 4096,
+                                  "default": 0
+                                },
+                                "originOffsetAlongCells": {
+                                  "type": "number",
+                                  "minimum": -128,
+                                  "maximum": 128,
+                                  "default": 0
+                                },
+                                "originOffsetNormalCells": {
+                                  "type": "number",
+                                  "minimum": -128,
+                                  "maximum": 128,
+                                  "default": 0
+                                },
+                                "role": {
+                                  "type": "string",
+                                  "enum": [
+                                    "straight",
+                                    "outerCorner",
+                                    "innerCorner"
+                                  ],
+                                  "default": "straight"
+                                }
+                              },
+                              "required": [
+                                "typeName"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "minItems": 1,
+                            "maxItems": 64
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "pieces"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "seed": {
+                        "type": "integer"
+                      },
+                      "gapCells": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 128,
+                        "default": 0
+                      },
+                      "maxBendDegrees": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 180,
+                        "default": 50
+                      },
+                      "maxObjects": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 2000,
+                        "default": 2000
+                      },
+                      "avoidExisting": {
+                        "type": "boolean",
+                        "default": true
+                      },
+                      "baseHeight": {
+                        "type": "string",
+                        "enum": [
+                          "terrain",
+                          "low",
+                          "high"
+                        ],
+                        "default": "terrain"
+                      },
+                      "exclusions": {
+                        "type": "array",
+                        "items": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "enum": [
+                                    "rectangle"
+                                  ],
+                                  "default": "rectangle"
+                                },
+                                "space": {
+                                  "type": "string",
+                                  "enum": [
+                                    "playableGrid",
+                                    "mapGrid"
+                                  ],
+                                  "default": "playableGrid"
+                                },
+                                "x": {
+                                  "type": "integer"
+                                },
+                                "y": {
+                                  "type": "integer"
+                                },
+                                "width": {
+                                  "type": "integer",
+                                  "minimum": 1
+                                },
+                                "height": {
+                                  "type": "integer",
+                                  "minimum": 1
+                                }
+                              },
+                              "required": [
+                                "x",
+                                "y",
+                                "width",
+                                "height"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "enum": [
+                                    "circle"
+                                  ]
+                                },
+                                "space": {
+                                  "type": "string",
+                                  "enum": [
+                                    "playableGrid",
+                                    "mapGrid"
+                                  ],
+                                  "default": "playableGrid"
+                                },
+                                "centerX": {
+                                  "type": "number"
+                                },
+                                "centerY": {
+                                  "type": "number"
+                                },
+                                "radius": {
+                                  "type": "number",
+                                  "exclusiveMinimum": 0
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "centerX",
+                                "centerY",
+                                "radius"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "enum": [
+                                    "polygon"
+                                  ]
+                                },
+                                "space": {
+                                  "type": "string",
+                                  "enum": [
+                                    "playableGrid",
+                                    "mapGrid"
+                                  ],
+                                  "default": "playableGrid"
+                                },
+                                "vertices": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "x": {
+                                        "type": "number"
+                                      },
+                                      "y": {
+                                        "type": "number"
+                                      }
+                                    },
+                                    "required": [
+                                      "x",
+                                      "y"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "minItems": 3,
+                                  "maxItems": 64
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "vertices"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        },
+                        "minItems": 0,
+                        "maxItems": 100
+                      },
+                      "catalogHash": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "region",
+                      "style",
+                      "seed"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "command",
+                  "arguments"
+                ],
+                "additionalProperties": false
               }
             ]
           },
@@ -8397,6 +9265,557 @@
       "required": [
         "preparedPlanId",
         "planHash"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "terrain.detect_cliffs": {
+    "description": "Detect directed dual-grid height discontinuity lines, high ground on the left. Coordinates are playableGrid; does not infer wide steep slopes or engine cliff flags.",
+    "argumentsSchema": {
+      "type": "object",
+      "properties": {
+        "region": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "rectangle"
+                  ],
+                  "default": "rectangle"
+                },
+                "space": {
+                  "type": "string",
+                  "enum": [
+                    "playableGrid",
+                    "mapGrid"
+                  ],
+                  "default": "playableGrid"
+                },
+                "x": {
+                  "type": "integer"
+                },
+                "y": {
+                  "type": "integer"
+                },
+                "width": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "height": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "required": [
+                "x",
+                "y",
+                "width",
+                "height"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "circle"
+                  ]
+                },
+                "space": {
+                  "type": "string",
+                  "enum": [
+                    "playableGrid",
+                    "mapGrid"
+                  ],
+                  "default": "playableGrid"
+                },
+                "centerX": {
+                  "type": "number"
+                },
+                "centerY": {
+                  "type": "number"
+                },
+                "radius": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                }
+              },
+              "required": [
+                "kind",
+                "centerX",
+                "centerY",
+                "radius"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "polygon"
+                  ]
+                },
+                "space": {
+                  "type": "string",
+                  "enum": [
+                    "playableGrid",
+                    "mapGrid"
+                  ],
+                  "default": "playableGrid"
+                },
+                "vertices": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "x": {
+                        "type": "number"
+                      },
+                      "y": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "x",
+                      "y"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "minItems": 3,
+                  "maxItems": 64
+                }
+              },
+              "required": [
+                "kind",
+                "vertices"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "minDrop": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "default": 20
+        },
+        "minSlopeDegrees": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "exclusiveMaximum": 90,
+          "default": 60
+        }
+      },
+      "required": [
+        "region"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "objects.place_cliffs": {
+    "description": "Place cliff decoration along detected seams with deterministic variation. Style length/depth are seam-aligned cells, required unless measured. Positive normal offset points uphill; origin offsets correct model pivots independently of coverage. Object Z is terrain-relative: baseHeight terrain uses zOffset directly; low/high convert absolute target to an offset using bilinear terrain sampling. Skips blocked/bent spans and returns counts. Supports prepared edits and undo; visual model fit needs calibration.",
+    "argumentsSchema": {
+      "type": "object",
+      "properties": {
+        "region": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "rectangle"
+                  ],
+                  "default": "rectangle"
+                },
+                "space": {
+                  "type": "string",
+                  "enum": [
+                    "playableGrid",
+                    "mapGrid"
+                  ],
+                  "default": "playableGrid"
+                },
+                "x": {
+                  "type": "integer"
+                },
+                "y": {
+                  "type": "integer"
+                },
+                "width": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "height": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "required": [
+                "x",
+                "y",
+                "width",
+                "height"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "circle"
+                  ]
+                },
+                "space": {
+                  "type": "string",
+                  "enum": [
+                    "playableGrid",
+                    "mapGrid"
+                  ],
+                  "default": "playableGrid"
+                },
+                "centerX": {
+                  "type": "number"
+                },
+                "centerY": {
+                  "type": "number"
+                },
+                "radius": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                }
+              },
+              "required": [
+                "kind",
+                "centerX",
+                "centerY",
+                "radius"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "polygon"
+                  ]
+                },
+                "space": {
+                  "type": "string",
+                  "enum": [
+                    "playableGrid",
+                    "mapGrid"
+                  ],
+                  "default": "playableGrid"
+                },
+                "vertices": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "x": {
+                        "type": "number"
+                      },
+                      "y": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "x",
+                      "y"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "minItems": 3,
+                  "maxItems": 64
+                }
+              },
+              "required": [
+                "kind",
+                "vertices"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "minDrop": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "default": 20
+        },
+        "minSlopeDegrees": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "exclusiveMaximum": 90,
+          "default": 60
+        },
+        "style": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "pieces": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "typeName": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "lengthCells": {
+                    "type": "number",
+                    "minimum": 0.25,
+                    "maximum": 4096
+                  },
+                  "depthCells": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "maximum": 4096
+                  },
+                  "angleOffsetDegrees": {
+                    "type": "number",
+                    "minimum": -360,
+                    "maximum": 360,
+                    "default": 0
+                  },
+                  "normalOffsetCells": {
+                    "type": "number",
+                    "minimum": -128,
+                    "maximum": 128,
+                    "default": 0
+                  },
+                  "zOffset": {
+                    "type": "number",
+                    "minimum": -4096,
+                    "maximum": 4096,
+                    "default": 0
+                  },
+                  "originOffsetAlongCells": {
+                    "type": "number",
+                    "minimum": -128,
+                    "maximum": 128,
+                    "default": 0
+                  },
+                  "originOffsetNormalCells": {
+                    "type": "number",
+                    "minimum": -128,
+                    "maximum": 128,
+                    "default": 0
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "straight",
+                      "outerCorner",
+                      "innerCorner"
+                    ],
+                    "default": "straight"
+                  }
+                },
+                "required": [
+                  "typeName"
+                ],
+                "additionalProperties": false
+              },
+              "minItems": 1,
+              "maxItems": 64
+            }
+          },
+          "required": [
+            "name",
+            "pieces"
+          ],
+          "additionalProperties": false
+        },
+        "seed": {
+          "type": "integer"
+        },
+        "gapCells": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 128,
+          "default": 0
+        },
+        "maxBendDegrees": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 180,
+          "default": 50
+        },
+        "maxObjects": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2000,
+          "default": 2000
+        },
+        "avoidExisting": {
+          "type": "boolean",
+          "default": true
+        },
+        "baseHeight": {
+          "type": "string",
+          "enum": [
+            "terrain",
+            "low",
+            "high"
+          ],
+          "default": "terrain"
+        },
+        "exclusions": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "rectangle"
+                    ],
+                    "default": "rectangle"
+                  },
+                  "space": {
+                    "type": "string",
+                    "enum": [
+                      "playableGrid",
+                      "mapGrid"
+                    ],
+                    "default": "playableGrid"
+                  },
+                  "x": {
+                    "type": "integer"
+                  },
+                  "y": {
+                    "type": "integer"
+                  },
+                  "width": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "height": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "width",
+                  "height"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "circle"
+                    ]
+                  },
+                  "space": {
+                    "type": "string",
+                    "enum": [
+                      "playableGrid",
+                      "mapGrid"
+                    ],
+                    "default": "playableGrid"
+                  },
+                  "centerX": {
+                    "type": "number"
+                  },
+                  "centerY": {
+                    "type": "number"
+                  },
+                  "radius": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  }
+                },
+                "required": [
+                  "kind",
+                  "centerX",
+                  "centerY",
+                  "radius"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "polygon"
+                    ]
+                  },
+                  "space": {
+                    "type": "string",
+                    "enum": [
+                      "playableGrid",
+                      "mapGrid"
+                    ],
+                    "default": "playableGrid"
+                  },
+                  "vertices": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "x": {
+                          "type": "number"
+                        },
+                        "y": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "x",
+                        "y"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "minItems": 3,
+                    "maxItems": 64
+                  }
+                },
+                "required": [
+                  "kind",
+                  "vertices"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "minItems": 0,
+          "maxItems": 100
+        },
+        "catalogHash": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "region",
+        "style",
+        "seed"
       ],
       "additionalProperties": false
     }

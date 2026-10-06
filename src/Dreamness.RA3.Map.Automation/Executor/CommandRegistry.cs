@@ -68,6 +68,8 @@ public sealed class CommandRegistry
         registry.Register(new PlayerStartHandler("starts.list"));
         registry.Register(new PlayerStartHandler("starts.place"));
         registry.Register(new ScatterObjectsHandler(catalog, footprints));
+        registry.Register(new CliffHandler("terrain.detect_cliffs", catalog, footprints));
+        registry.Register(new CliffHandler("objects.place_cliffs", catalog, footprints));
         registry.Register(new AnalyzeObjectSpaceHandler());
         foreach (var name in new[] { "objects.query", "objects.place", "objects.move", "objects.delete", "objects.configure" })
             registry.Register(new ObjectHandler(name, catalog));

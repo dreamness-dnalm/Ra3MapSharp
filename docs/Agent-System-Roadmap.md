@@ -481,6 +481,21 @@
 评审大图显示低地是一片嘈杂的杂色场，**缺少构成意图**——没有路径、没有可读的基地空间、没有刻意的地标。当前方法能生成**像地形**的材质场，但生成不了**像设计**的图。下一步应该是有意图的构成（先规划路径与基地，再让材质围绕它们组织），而不是继续调噪声参数。
 
 **另一个反复踩到的操作坑**：CLI 入口是 **Agent 的 DLL**，改 `Automation` 后只 build Automation 的话，CLI 仍用旧副本（表现为「改了代码但数字完全没变、连评审图路径都一样」）。跑 CLI 前必须重建 Agent 项目。
+
+#### S2·6 美术阈值审议（2026-09-19）
+
+语料 P25–P75 是既有惯例，不是引擎限制。审议针对 rubric **判分政策**，不是因为某一张草稿被打失败就改线。
+
+| 检查 | 决定 | 理由 |
+| --- | --- | --- |
+| materialVariety / dominantMaterialShare / transitionCoverage / decorationDensity | **保留**既有 P25/P75 与 warn 带 | 仍能拦住「明显坏掉」；大图密度够不到 P25 继续按工具 2000 上限说明 |
+| clumping | **放宽**：&lt;1 才 fail；1–P25 改为 descriptive | 指标含义是网格 vs 成群，不是必须落入官方四分位；语料最低约 1.42，成群散布后仍可能略低于 2.39 |
+| materialCohesion / patchNaturalness | **维持 descriptive** | 与 S2·4 一致：紧凑度度量边界锯齿，不再判分 |
+| landmarkPresence | **降级为 descriptive** | 「3 类×每类 3 个」不是 63 图统计；比 Roadmap 原文「≥3 个可辨识地标」更严；且受目录分类/占地覆盖限制 |
+| combatReadability | **维持 not-evaluated** | 必须人眼看评审大图 |
+
+历史条目（S2 首次评审、S2·2、S2·3）保留当时的阈值与判决，不回溯改写。
+
 ### S3 编辑器桥接 + 游戏侧观察闭环 —— 直击 G6（探针 3 天 + 实施 10–15 天）
 
 - **S3.0 探针（先做）**：枚举 `MapCoreLib.Core.Scripts.*` 与 `MapCoreLib.dll`/`NewUI.dll` 可用类型，确认插件触发方式（菜单/加载/保存）与是否存在相机、截图、选区等 hook。产出"能做/不能做"清单。

@@ -1,6 +1,284 @@
-# Agent 命令入口（实现中）
+# Agent 项目使用说明
 
 当前提供持久 JSONL 进程、MCP stdio 和类库 `AgentRuntime`。MCP 配置见 [MCP-Usage.md](MCP-Usage.md)。实际命令以 `system.capabilities` 为准，`system.schema` 返回机器可读参数描述；不能把详细设计中的全部接口视为已实现。
+
+本文面向脚本开发者、MCP 客户端接入者和 C# 集成者。基础编辑事务、坐标与历史语义见 [Automation 库使用说明](Automation-Usage.md)；本文重点说明 Agent 的宿主能力和完整调用流程。
+
+## 选择调用方式
+
+| 场景 | 入口 | 生命周期 |
+| --- | --- | --- |
+| 一次性创建、编辑和保存地图 | `--requests requests.json` | 按数组顺序运行，首个失败停止，结束关闭宿主 |
+| 脚本持续编辑、等待预览 | `--stdio` | 一行一个 JSON 请求，保持 stdin 打开 |
+| AI 工具客户端接入 | `--mcp` | 客户端启动进程，使用 MCP 握手和 tools/call |
+| .NET 程序内集成 | `AgentRuntime.ExecuteAsync` | `await using` 管理 runtime |
+
+Agent 不是大模型客户端，不会自行连接模型或根据自然语言作图。调用方负责把任务转成命令；Agent 执行地图编辑、目录检索、诊断、渲染和静态验收。
+
+## 五分钟快速开始：批量生成地图
+
+在仓库根目录运行，先构建 Agent（只构建 Automation 不会更新宿主目录中的依赖副本）：
+
+```powershell
+dotnet build src/Dreamness.RA3.Map.Agent/Dreamness.RA3.Map.Agent.csproj
+$agentDll = (Resolve-Path 'src/Dreamness.RA3.Map.Agent/bin/Debug/net6.0/Dreamness.RA3.Map.Agent.dll').Path
+dotnet $agentDll --help
+```
+
+将下列内容保存为 `requests.json`，修改 parentPath 为实际地图父目录。目标 `AgentDemo/AgentDemo.map` 必须尚不存在；重跑时更换地图名，或使用 map.open 打开已有地图。
+
+```json
+[
+  {"requestId":"demo-create","command":"map.create","arguments":{"parentPath":"N:\\workspace\\ra3\\Ra3MapSharp\\artifacts\\agent-demo-maps","mapName":"AgentDemo","playableWidth":64,"playableHeight":64,"border":8}},
+  {"requestId":"demo-edit","sessionId":"$current","expectedRevision":0,"command":"batch.execute","arguments":{"commands":[
+    {"command":"terrain.set_height","arguments":{"region":{"kind":"rectangle","space":"playableGrid","x":8,"y":8,"width":12,"height":12},"height":300}},
+    {"command":"starts.place","arguments":{"playerSlot":1,"x":12,"y":12}}
+  ]}},
+  {"requestId":"demo-info","sessionId":"$current","command":"map.info"},
+  {"requestId":"demo-height","sessionId":"$current","command":"diagnostics.render","arguments":{"layer":"height","requiredRevision":1,"maxEdge":512}},
+  {"requestId":"demo-save","sessionId":"$current","expectedRevision":1,"command":"map.save","arguments":{"compress":true}}
+]
+```
+
+运行：
+
+```powershell
+dotnet $agentDll --requests .\requests.json --artifacts .\artifacts\agent-demo
+```
+
+stdout 按请求输出结果，检查每条 `status` 为 `succeeded`；map.save 的 `data.userMapFilePath` 给出地图路径，diagnostics.render 的 `data.imagePath` 给出诊断 PNG。批次只产生一个修订，所以保存时 expectedRevision 为 1。此示例只生成平台和一个出生点，不是完整对战地图。
+
+`--requests` 全部成功退出码为 0，命令失败为 1，选项/配置失败通常为 2。JSONL 模式会继续读后续请求，进程正常 EOF 退出时为 0，因此脚本应检查每条结果，不能只看进程退出码。
+
+## 启动参数速查
+
+| 参数 | 说明 |
+| --- | --- |
+| `--stdio` | JSONL 模式；不指定模式时也是 JSONL |
+| `--mcp` | MCP stdio；不能与 --requests 同用 |
+| `--requests <文件>` | JSON 请求数组文件，适合同步编辑 |
+| `--launcher <文件>` | WbLauncher.exe；未传时读取 RA3_WB_LAUNCHER |
+| `--artifacts <目录>` | 预览与生成数据根目录；默认当前目录下 artifacts/agent-previews |
+| `--object-catalog <文件>` | 编辑器 ObjectCategory.json 分类目录 |
+| `--object-translations <文件>` | ObjWndTrans.json 译名表，需有分类目录 |
+| `--asset-catalog <文件>` | 生成的 catalog.json |
+| `--album <文件>` | 生成的图册索引文件 |
+| `--footprints <文件>` | 生成的占地目录 |
+| `--art-rules <文件>` | 生成的语料美术规则 |
+| `--build-catalog <输出文件>` | 构建素材目录；--screenshots 可指定编辑器截图目录 |
+| `--build-album <输出目录>` | 用真实渲染构建图册，需要素材目录和 launcher |
+| `--build-footprints <输出文件>` | 从已有图册量测占地；--footprint-threshold 默认 12 |
+| `--analyze-corpus <输出文件>` | 分析 --corpus 地图目录；--corpus-limit 可限数量，--corpus-sample 默认 30000 |
+
+图册参数还包括 --album-all、--album-limit、--album-grid、--album-spacing、--album-tile、--album-tile-edge，详见 [AlbumBuildCommand.cs](../src/Dreamness.RA3.Map.Agent/AlbumBuildCommand.cs)。当前 --album-all 后应再跟其他选项，例如 `--album-all --launcher <路径>`，避免参数解析器将末尾无值开关报为 Missing option value。
+
+构建数据命令是独立的一次性模式，应分别运行。当前 --help 只列常用宿主参数，完整选项以 [Program.cs](../src/Dreamness.RA3.Map.Agent/Program.cs) 为准。建议给客户端使用绝对 DLL、launcher 和 artifacts 路径，避免启动目录改变造成产物位置漂移。
+
+## 持久 JSONL 客户端示例
+
+下面仅使用 Python 标准库。保存为 Python 文件后，从仓库根运行；它顺序发送请求、读回结果，并根据实际返回值更新修订。生产客户端可在此基础上增加超时、stderr 日志记录和进程退出检测。
+
+```python
+import json
+import pathlib
+import subprocess
+import tempfile
+
+dll = pathlib.Path("src/Dreamness.RA3.Map.Agent/bin/Debug/net6.0/Dreamness.RA3.Map.Agent.dll").resolve()
+proc = subprocess.Popen(
+    ["dotnet", str(dll), "--stdio", "--artifacts", str(pathlib.Path("artifacts/jsonl-demo").resolve())],
+    stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+    text=True, encoding="utf-8", bufsize=1,
+)  # stderr 默认继承，避免无人读取的 stderr PIPE 被写满
+
+def call(command, arguments=None, session_id=None, revision=None):
+    request = {"command": command, "arguments": arguments or {}}
+    if session_id is not None:
+        request["sessionId"] = session_id
+    if revision is not None:
+        request["expectedRevision"] = revision
+    # 正常请求可省略 requestId；网络/进程桥接层重传应显式复用同一 ID
+    proc.stdin.write(json.dumps(request, ensure_ascii=False) + "\n")
+    proc.stdin.flush()
+    line = proc.stdout.readline()
+    if not line:
+        raise RuntimeError("Agent 已退出或关闭输出")
+    result = json.loads(line)
+    if result["status"] != "succeeded":
+        raise RuntimeError(result["error"])
+    return result
+
+try:
+    capabilities = call("system.capabilities")
+    print(capabilities["data"]["protocol"])
+    root = tempfile.mkdtemp(prefix="ra3-agent-")
+    opened = call("map.create", {"parentPath": root, "mapName": "JsonlDemo",
+                                "playableWidth": 32, "playableHeight": 24})
+    sid = opened["data"]["sessionId"]
+    revision = opened["data"]["revision"]
+    edited = call("waypoints.place", {"name": "Lookout", "x": 5, "y": 9}, sid, revision)
+    revision = edited["revisionAfter"]
+    image = call("diagnostics.render", {"layer": "height", "requiredRevision": revision}, sid)
+    print(image["data"]["imagePath"])
+    saved = call("map.save", {"compress": True}, sid, revision)
+    print(saved["data"]["userMapFilePath"])
+    call("map.close", session_id=sid)
+finally:
+    proc.stdin.close()  # 所有作业处理完后再发送 EOF
+    proc.wait()
+```
+
+JSONL 请求必须各占一行，发送后 flush；stdout 只用于协议，stderr 用于日志。UTF-8 首条 BOM 已由宿主容忍，客户端仍建议使用无 BOM UTF-8。失败结果不能用于推进本地修订，修订冲突后先 map.info 再决定下一步；修正请求时换新 requestId，原样重传保留原 ID。
+
+## MCP 接入与工具调用
+
+在 MCP 客户端中配置进程 `dotnet`，参数为绝对 DLL 路径、`--mcp`，以及所需的 --launcher/--artifacts。外围配置结构因客户端而异，完整配置与探测见 [MCP-Usage.md](MCP-Usage.md)。
+
+宿主实现本地 MCP stdio，握手版本为 2025-06-18。客户端先 initialize，再发 notifications/initialized，随后 tools/list 和 tools/call。命令名转为 `ra3_` 前缀并把点换为下划线，例如 map.info → ra3_map_info。
+
+tools/call 示例：
+
+```json
+{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"ra3_map_info","arguments":{"sessionId":"$current","arguments":{}}}}
+```
+
+外层 arguments 是工具请求信封，内层 arguments 才是命令参数。写命令的 expectedRevision、requestId 与 sessionId 放外层。地图命令失败以 isError=true 和 CommandResult 文本返回；参数/协议错误返回 JSON-RPC error。诊断图、图册、preview.inspect 等图像结果同时返回原生 PNG 内容块和元数据文本。工具列表随版本变化，勿硬编码数量。
+
+## C# 程序内调用
+
+调用方引用 `src/Dreamness.RA3.Map.Agent/Dreamness.RA3.Map.Agent.csproj`，即可使用公开 AgentRuntime。下面可作为 .NET 6 控制台项目的 Program.cs：
+
+```csharp
+using System.Text.Json;
+using Dreamness.RA3.Map.Agent;
+using Dreamness.RA3.Map.Automation.Commands.Abstractions;
+
+await using var runtime = new AgentRuntime();
+var capabilities = await runtime.ExecuteAsync(new CommandRequest
+{
+    Command = "system.capabilities"
+});
+Console.WriteLine(JsonSerializer.Serialize(capabilities, AgentJson.Options));
+
+var opened = await runtime.ExecuteAsync(new CommandRequest
+{
+    Command = "map.create",
+    Arguments = JsonSerializer.SerializeToElement(new
+    {
+        parentPath = Path.Combine(Path.GetTempPath(), "Ra3Agent-" + Guid.NewGuid().ToString("N")),
+        mapName = "RuntimeDemo", playableWidth = 32, playableHeight = 24
+    })
+});
+if (opened.Status != "succeeded")
+    throw new InvalidOperationException(opened.Error?.Message);
+
+var info = await runtime.ExecuteAsync(new CommandRequest
+{
+    SessionId = "$current", Command = "map.info"
+});
+Console.WriteLine(JsonSerializer.Serialize(info, AgentJson.Options));
+```
+
+需要真实渲染时传 `new WorldBuilderRenderer(launcherPath, artifactsRoot)`（命名空间 Dreamness.RA3.Map.Agent.Rendering）。构造函数还接受 catalog、diagnosticsRoot、assets、footprints、footprintOverridesPath 和 artRules。CLI 的自动发现/加载在 Program.cs 内，直接 new AgentRuntime 不会自动加载 launcher 环境变量或磁盘目录，应由调用方加载并注入。
+
+调用方应串行派发 runtime 请求，保持 `$current`、作业收据和会话归属一致。后台渲染使用独立快照，可以在作业运行期间继续串行提交编辑请求。DisposeAsync 取消并等待作业，关闭该 runtime 打开的会话，保留未保存工作副本。
+
+## 宿主命令速查
+
+| 命令 | 参数或用途 |
+| --- | --- |
+| `system.capabilities` | 无；查看编辑命令、宿主命令、渲染可用性和已加载目录 |
+| `system.schema` | command 可选；省略返回全部描述 |
+| `map.close` | 需要 sessionId，默认保留工作副本，不自动 map.save |
+| `map.inspect_file` | path、typeNames 可选、offset=0、limit=50、includeProperties=false；无需打开编辑会话 |
+| `assets.objects` | query、offset=0、limit=50；查询编辑器分类/译名 |
+| `assets.catalog_info` / `assets.search` | 查看生成目录或按 kind/theme/query 等筛选，具体字段用 system.schema 查询 |
+| `assets.album` | typeName；读取物体外观图册 |
+| `footprints.get/list/set` | get：typeName；list：分页；set：typeName/widthCells/depthCells，持久化人工覆盖 |
+| `art.rules` | 返回已加载的语料规则 |
+| `preview.start` | sessionId；requiredRevision、preparedPlanId/planHash 可选，返回 jobId |
+| `jobs.status` / `jobs.cancel` | jobId；无需 sessionId |
+| `preview.inspect` | jobId、maxEdge=1024，可选 crop（x/y/width/height 原始像素矩形） |
+| `diagnostics.render` | sessionId、layer、requiredRevision、maxEdge、profile/footprints/routes 或候选身份 |
+| `review.render_set` | sessionId；requiredRevision、localCells=64、sampleTarget=30000；真实评审图与 rubric |
+
+编辑命令沿用 Automation 的修订检查；宿主命令如 map.close、jobs.cancel、footprints.set 有各自语义，不统一要求 expectedRevision。footprints.set 改的是目录覆盖文件，不能通过地图 history.undo 撤销。
+
+## 完整预览作业流程
+
+先配置有效 launcher 并保持 JSONL/MCP 进程运行，按顺序执行：
+
+```json
+{"requestId":"preview-1","sessionId":"$current","command":"preview.start","arguments":{"requiredRevision":1}}
+```
+
+读取 `data.jobId`，将其填入以下请求。每隔约 1 秒查询一次：
+
+```json
+{"command":"jobs.status","arguments":{"jobId":"填入返回的jobId"}}
+```
+
+外层 status=succeeded 表示查询成功；真正作业状态在 `data.state`：queued、running、succeeded、failed、cancelled。成功后调用：
+
+```json
+{"command":"preview.inspect","arguments":{"jobId":"填入返回的jobId","maxEdge":1024}}
+```
+
+读取 imagePath/imageHash、地图修订/哈希、渲染配置哈希和 pixelToPlayableGrid。crop 使用原始图左上角像素坐标，裁剪缩放后应使用新返回的坐标矩阵。失败读取作业 data.error；取消用 jobs.cancel，并继续查询直至终态。
+
+同一 runtime 的真实渲染通过单一渲染门排队；preview.start 不等同渲染完成。作业记录和 jobId 只在当前 runtime 存活，重启后无法查询旧作业，但落盘产物仍在。不要将 preview.start 放在一次性 --requests 的最后后立即退出，否则宿主释放时会取消未结束的作业。
+
+预览固定在启动时捕获的修订快照上，后续编辑不会改变这张预览。将结果用于当前地图判断前，应核对修订和地图哈希。候选需同时传 preparedPlanId/planHash；候选图的 revision 是 baseRevision，尚未提交。
+
+## 构建素材、图册、占地和美术规则
+
+以下使用同一个 artifacts 根目录，先把 launcherPath、corpusRoot 改为本机实际路径：
+
+```powershell
+$agentDll = (Resolve-Path 'src/Dreamness.RA3.Map.Agent/bin/Debug/net6.0/Dreamness.RA3.Map.Agent.dll').Path
+$launcherPath = 'C:\RA3\NewWorldBuilder\WbLauncher.exe'
+$artifactRoot = Join-Path (Get-Location) 'artifacts\agent-data'
+$corpusRoot = 'C:\RA3\origin_maps'
+dotnet $agentDll --build-catalog "$artifactRoot\catalog\catalog.json" --launcher $launcherPath --artifacts $artifactRoot
+dotnet $agentDll --build-album "$artifactRoot\album" --launcher $launcherPath --artifacts $artifactRoot
+dotnet $agentDll --build-footprints "$artifactRoot\footprints\footprints.json" --artifacts $artifactRoot
+dotnet $agentDll --analyze-corpus "$artifactRoot\art-rules\art-rules.json" --corpus $corpusRoot --launcher $launcherPath --artifacts $artifactRoot
+dotnet $agentDll --stdio --launcher $launcherPath --artifacts $artifactRoot
+```
+
+依次运行并检查每一步退出码，前一步失败应先处理再继续。build-catalog 使用编辑器分类/译名及可用截图；build-album 生成外观图册和空网格参考渲染；build-footprints 量测已有图像，不重新渲染；analyze-corpus 遍历地图语料，单图解析失败记为 failure，不中断整轮。
+
+启动时自动读取 artifacts 下的默认目录，显式 --asset-catalog/--album/--footprints/--art-rules 可覆盖文件来源。显式文件缺失或加载失败会退出。数据构建后重启宿主，并用 assets.catalog_info、assets.album、footprints.list、art.rules 核对可用性；覆盖数量由本机资源决定，不以固定物体数量作为通用验收标准。
+
+review.render_set 真实渲染并合成总览和四张固定比例局部图，同时输出 rubric。阈值来自加载的语料规则，每项携带实测值及出处；combatReadability 为 not-evaluated，materialCohesion、patchNaturalness、landmarkPresence 及 1–P25 clumping 为 descriptive，不判分。当前候选评审优先使用 diagnostics.render/preview.start：review.render_set 虽可捕获候选图像，其 art.profile 调用仍测活动地图，不能将该组合报告当作同一候选的量测证据。
+
+## 错误排查与验证
+
+| 现象 | 排查与处理 |
+| --- | --- |
+| SESSION_NOT_FOUND | 先创建/打开地图；旧进程的 sessionId 不可复用，关闭当前会话后 $current 会清空 |
+| REVISION_CONFLICT | map.info 读回状态，重新判断操作并换新 requestId |
+| RENDER_NOT_CONFIGURED | 启动时传 --launcher 或设置 RA3_WB_LAUNCHER；已启动宿主需重启 |
+| PREVIEW_NOT_READY | 检查 jobs.status，等待 state=succeeded 后 inspect |
+| CATALOG_UNAVAILABLE / RULES_UNAVAILABLE / FOOTPRINT_UNAVAILABLE | 构建或显式加载对应数据，确认 artifacts 根目录一致 |
+| FOOTPRINT_MISSING | 该类型未量测，检查目录覆盖；必要时用 footprints.set 填入人工核实值 |
+| MCP 没有可用工具 | 确认使用 --mcp、完成握手、DLL 路径正确，查看 stderr |
+| 改动后输出不变 | 重新构建 Agent，确认客户端运行的是该份 DLL，再重启宿主 |
+| 渲染配置报 0xEF | 外部 launcher 的 JSON 配置必须无 BOM UTF-8；PowerShell 5.1 的 Set-Content -Encoding UTF8 会写 BOM |
+
+Windows PowerShell 5.1 的中文 .ps1 文件需 UTF-8 with BOM，而外部工具 JSON 配置需无 BOM；二者要求不同。stdout 应保持协议纯净。超时后先查询修订/作业状态，判断是否已经完成，再决定重试。
+
+在仓库根验证：
+
+```powershell
+dotnet build src/Dreamness.RA3.Map.Agent/Dreamness.RA3.Map.Agent.csproj --no-restore
+dotnet test test/Dreamness.RA3.Map.Agent.Test/Dreamness.RA3.Map.Agent.Test.csproj --no-restore
+powershell -NoProfile -File scripts/mcp_probe.ps1 -Smoke
+# 需要本机 WbLauncher 与可用编辑器环境
+powershell -NoProfile -File scripts/mcp_probe.ps1 -Smoke -Render
+```
+
+Agent.Test 不依赖本机 RA3 数据；真实渲染探测依赖本机安装。下面保留编辑命令与高级工作流参考，实际调用参数仍应通过 system.schema 查询。
 
 ## 构建与运行
 
@@ -77,15 +355,15 @@ stdin 每行一个请求，stdout 每行一个结果。宿主必须保持运行�
 
 普通对象返回 `obj-N` 句柄、世界坐标和 assetValidation（目录声明为 editor-declared，否则 unverified）。道路与路径点不在普通对象查询范围。Z 为地图对象的原始 Z 参数，尚未提供自动贴地或占地避障。
 
-历史版本升级为2，普通对象和路径点句柄随撤销/重做恢复；保存后重开且用户文件未变时保留历史、修订和句柄。旧版历史只有在所有快照的普通对象序列一致时才迁移，否则返回 `HISTORY_MIGRATION_REQUIRED`。外部修改干净地图后重开会建立新基线，应重新查询句柄；未保存工作区与外部修改冲突时拒绝打开。
+当前历史索引 schemaVersion 为9；普通对象和路径点句柄随撤销/重做恢复，保存后重开且用户文件未变时保留历史、修订和句柄。早期历史缺少普通对象句柄时，只有在所有快照的普通对象序列一致时才迁移，否则返回 `HISTORY_MIGRATION_REQUIRED`。外部修改干净地图后重开会建立新基线，应重新查询句柄；未保存工作区与外部修改冲突时拒绝打开。
 
-高度编辑当前返回 `passabilityUpdated=false`。它尚未自动推导通行性，不代表已经可玩。保护区已支持持久保存；资源组合件、玩法验证尚在开发，不要将地形测试图用于声称完整地图生成通过。
+高度编辑当前返回 `passabilityUpdated=false`，不会自动重建通行标记。保护区支持持久保存，map.validate 提供显式规则下的静态验收；这些结果不能证明目标游戏中的全部玩法行为。
 
 需要重建通行标记时显式调用 terrain.rebuild_passability。它会替换全图（含边界）的普通 Passable/Impassable 标记，包括手工设置的普通阻塞；不要对需保留这些标记的旧图直接调用。默认45度阈值与一格四邻域扩张均可配置，特殊标记保留。命令支持事务和撤销，不计算水域、对象碰撞、建造或单位移动规则。
 
 ## 设计实体与候选
 
-`design.prepare` 接受 baseRevision 和 patch（schemaVersion=1、upsert、remove），每次修改1–100个实体，总量最多1000。upsert 项为 id、kind、parameters，可选 label；缺席的旧实体保留，remove 显式删除。当前支持六类实体：
+`design.prepare` 接受 baseRevision 和 patch（schemaVersion=1、upsert、remove），每次修改1–100个实体，总量最多1000。upsert 项为 id、kind、parameters，可选 label；缺席的旧实体保留，remove 显式删除。当前支持七类实体：
 
 | kind | parameters |
 | --- | --- |
@@ -95,6 +373,7 @@ stdin 每行一个请求，stdout 每行一个结果。宿主必须保持运行�
 | scatter | 同 objects.scatter 参数，必须指定 seed、profile |
 | derived | sourceEntityId、transform=rotate180；复制源实体生成的高度格和普通对象位置/朝向 |
 | playerStart | playerSlot（1–6）、x/y，可选 z/space/anchor；按 starts.place 放置出生路径点 |
+| texture | 同 texture.paint 的 region、texture、autoBlend；详细所有权规则见下文纹理设计实体 |
 
 ```json
 {"sessionId":"$current","command":"design.prepare","arguments":{"baseRevision":0,"patch":{"upsert":[{"id":"base-a","kind":"platform","parameters":{"region":{"x":8,"y":8,"width":12,"height":12},"value":300,"falloff":0.4}},{"id":"landmark","kind":"objects","parameters":{"placements":[{"typeName":"CC_Tree01","x":25,"y":25}]}}]}}}
@@ -322,7 +601,7 @@ polygon 可存入设计实体和保护历史。旧矩形/圆形记录省略新�
 
 实体拥有选中格及自动混合的一格邻域，记录原始/生成的瓦片、混合索引及定义指纹。`design.query` 返回 ownedTextureCells；相同参数不重复涂画，删除/重建恢复原始格值。依赖链允许分层覆盖，非依赖实体的混合邻域重叠也会拒绝；手工改变实体拥有的纹理格后，后续更新/删除报 ENTITY_CONFLICT。先准备候选，再预览和应用，撤销/保存重开保持绑定。
 
-历史版本为8，旧1–7版经现有检查迁移；nullable 纹理状态不改变旧设计哈希。算法 entity-compiler-v8 会在显式更新旧实体时重建。纹理表和混合表保持追加/复用，移除实体恢复格引用但不压缩未使用表项。自动混合重绘前会清除旧普通混合，避免统一材质后残留旧边缘，不改变单边和悬崖混合字段。双人示例保存 texture-patch.json，将表面图层按顺序纳入实体依赖链。
+纹理状态自历史版本8加入，当前索引版本9在磁盘上增量存储设计实体；旧版经现有检查迁移，nullable 纹理状态不改变旧设计哈希。算法 entity-compiler-v8 会在显式更新旧实体时重建。纹理表和混合表保持追加/复用，移除实体恢复格引用但不压缩未使用表项。自动混合重绘前会清除旧普通混合，避免统一材质后残留旧边缘，不改变单边和悬崖混合字段。双人示例保存 texture-patch.json，将表面图层按顺序纳入实体依赖链。
 
 纹理可作为 `derived` 的 `rotate180` 来源。先按源区域格心选择格子，再将 mapGrid 格子映射到 `(mapWidth-1-x,mapHeight-1-y)`，因此矩形、圆、多边形与物理边框坐标都使用相同离散规则。目标使用来源材质并按目标邻域重算普通混合，保留目标原有单边/悬崖混合。源目标的选中区域或混合邻域相交时拒绝 SYMMETRY_OVERLAP；目标与非依赖实体冲突、保护区或手工修改仍拒绝。派生链可继续引用派生纹理；改变来源材质会重建后代。此功能旋转材质布局，不旋转位图像素或既有复杂混合方向，不代表全图像素对称。
 
