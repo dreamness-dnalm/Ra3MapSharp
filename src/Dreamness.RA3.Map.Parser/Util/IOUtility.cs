@@ -63,9 +63,9 @@ public class IOUtility
         Type type = typeof(T);
         if (type == typeof(bool))
         {
-            byte temp = 0;
             for (int y2 = 0; y2 < height; y2++)
             {
+                byte temp = 0;
                 int x2;
                 for (x2 = 0; x2 < width; x2++)
                 {
@@ -76,7 +76,7 @@ public class IOUtility
                         temp = 0;
                     }
                 }
-                if ((x2 - 1) % 8 != 7)
+                if (width > 0 && (x2 - 1) % 8 != 7)
                 {
                     bw.Write(temp);
                 }

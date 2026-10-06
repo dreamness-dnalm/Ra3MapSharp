@@ -1,0 +1,239 @@
+using System.Text.Json;
+using Dreamness.RA3.Map.Automation.Catalog;
+using Dreamness.RA3.Map.Automation.Commands.Abstractions;
+using Dreamness.RA3.Map.Automation.Geometry;
+using Dreamness.RA3.Map.Automation.Storage;
+
+namespace Dreamness.RA3.Map.Automation.Commands.Objects;
+
+internal sealed class ScatterObjectsHandler : ICommandHandler
+{
+    private readonly ObjectCatalog? _catalog;
+    private readonly FootprintCatalog? _footprints;
+    public ScatterObjectsHandler(ObjectCatalog? catalog, FootprintCatalog? footprints = null)
+    { _catalog = catalog; _footprints = footprints; }
+    public string Name => "objects.scatter";
+    public CommandEffect Effect => CommandEffect.Mutation;
+
+    public Task<object?> ExecuteAsync(CommandContext? context, JsonElement arguments, CancellationToken token)
+    {
+        var session = context?.Session ?? throw new AutomationException("SESSION_NOT_FOUND", "需要地图会话。");
+        var map = session.Facade;
+        var args = AutomationJson.Deserialize<ScatterArgs>(arguments);
+        if (args.Region == null || args.Profile == null || args.Seed == null || args.Count < 1 || args.Count > 2000
+            || !float.IsFinite(args.MinDistanceCells) || args.MinDistanceCells < 1
+            || args.TypeNames == null || args.TypeNames.Length < 1 || args.TypeNames.Length > 64
+            || args.Exclusions == null || args.Exclusions.Length > 100
+            || args.Clusters is < 0 or > 500
+            || args.ClusterRadiusCells is < 1 or > 128 || args.ClusterSpacingCells is < 2 or > 512)
+            throw new AutomationException("INVALID_ARGUMENT", "散布需要 region、profile、seed、1–2000个对象、至少1格间距和1–64个类型；禁放区最多100个；clusters 0–500、簇半径 1–128、簇间距 2–512。");
+        foreach (var type in args.TypeNames)
+        {
+            if (!ObjectHandler.ValidTypeName(type)) throw new AutomationException("INVALID_ARGUMENT", "typeNames 包含非法普通对象资源名。");
+            _catalog?.Require(type, args.CatalogHash);
+        }
+        if (_catalog == null && args.CatalogHash != null)
+            throw new AutomationException("CATALOG_UNAVAILABLE", "当前未加载目录。");
+        var cells = args.Region.Cells(map);
+        var polygon = args.Region.Kind == "polygon" ? new GridPolygon(args.Region.Vertices) : null;
+        var excluded = new HashSet<(int X, int Y)>();
+        foreach (var region in args.Exclusions)
+        {
+            if (region == null) throw new AutomationException("INVALID_ARGUMENT", "禁放区域不能为null。");
+            excluded.UnionWith(region.Cells(map));
+        }
+        foreach (var zone in session.ProtectionZones.Where(zone => zone.Layers.Contains("objects")))
+            excluded.UnionWith(zone.Region.Cells(map));
+        var traversal = new TerrainTraversal(map, args.Profile, token);
+        var border = map.MapBorderWidth;
+        // Footprints used to be a per-call argument, so overlap checking was skipped unless the
+        // caller happened to have them. Prefer the measured catalogue and say which was used.
+        var footprints = args.Footprints;
+        var footprintSource = footprints == null ? (string?)null : "caller";
+        if (footprints == null && _footprints != null)
+        {
+            var needed = map.GetUnitObjects().Select(o => o.TypeName).Concat(args.TypeNames)
+                .Distinct(StringComparer.Ordinal);
+            // Only take over when every relevant type is measured; a partial set would reject
+            // the request for types that simply have no measurement yet.
+            if (_footprints.TryProfiles(needed, out var resolved))
+            {
+                footprints = resolved;
+                footprintSource = "catalog";
+            }
+        }
+        var footprintSet = footprints == null ? null : new ObjectFootprintSet(footprints);
+        var occupied = new List<OrientedFootprintBox>();
+        if (footprintSet != null)
+        {
+            var existing = map.GetUnitObjects();
+            if (existing.Count + args.Count > 2000) throw new AutomationException("LIMIT_EXCEEDED", "占地散布当前最多2000个普通对象。");
+            foreach (var type in existing.Select(o => o.TypeName).Concat(args.TypeNames).Distinct(StringComparer.Ordinal))
+                if (!footprintSet.Contains(type)) throw new AutomationException("FOOTPRINT_MISSING", "占地散布必须覆盖已有及待放置对象类型: " + type);
+            foreach (var obj in existing)
+                occupied.AddRange(footprintSet.At(obj.TypeName, obj.Position.X / 10d, obj.Position.Y / 10d, MapAngles.ToRadians(obj.Angle)));
+        }
+        bool FootprintHasSpace(OrientedFootprintBox[] boxes)
+        {
+            foreach (var box in boxes)
+            {
+                if (!box.Inside(map.MapPlayableWidth, map.MapPlayableHeight) || occupied.Any(box.Overlaps)) return false;
+                // Conservatively check every blocked cell intersected by the rotated rectangle,
+                // including access rectangles; checking only the object center is insufficient.
+                for (var y = Math.Max(0, (int)Math.Floor(box.MinY)); y < Math.Min(map.MapPlayableHeight, (int)Math.Ceiling(box.MaxY)); y++)
+                {
+                    token.ThrowIfCancellationRequested();
+                    for (var x = Math.Max(0, (int)Math.Floor(box.MinX)); x < Math.Min(map.MapPlayableWidth, (int)Math.Ceiling(box.MaxX)); x++)
+                        if ((traversal.Blocked[x, y] || excluded.Contains((x + border, y + border)))
+                            && box.Overlaps(new OrientedFootprintBox(new FootprintBox { WidthCells = 1, DepthCells = 1 }, x + .5, y + .5, 0))) return false;
+                }
+            }
+            return true;
+        }
+        cells.RemoveAll(c => c.X < border || c.Y < border || c.X >= map.MapWidth - border || c.Y >= map.MapHeight - border
+            || excluded.Contains(c) || traversal.Blocked[c.X - border, c.Y - border]);
+        if (cells.Count == 0) throw new AutomationException("PLACEMENT_FAILED", "区域没有符合条件的格子。");
+        var buckets = new Dictionary<(int X, int Y), List<(float X, float Y)>>();
+        var spacing = args.MinDistanceCells;
+        (int X, int Y) Bucket(float x, float y) => ((int)Math.Floor(x / spacing), (int)Math.Floor(y / spacing));
+        void Insert(float x, float y)
+        {
+            var key = Bucket(x, y);
+            if (!buckets.TryGetValue(key, out var values)) buckets.Add(key, values = new());
+            values.Add((x, y));
+        }
+        foreach (var obj in map.GetUnitObjects()) Insert(obj.Position.X / 10f, obj.Position.Y / 10f);
+        bool HasSpace(float x, float y)
+        {
+            var key = Bucket(x, y);
+            for (var dy = -1; dy <= 1; dy++)
+            for (var dx = -1; dx <= 1; dx++)
+                if (buckets.TryGetValue((key.X + dx, key.Y + dy), out var values))
+                    foreach (var p in values)
+                        if (Math.Pow(x - p.X, 2) + Math.Pow(y - p.Y, 2) < (double)spacing * spacing) return false;
+            return true;
+        }
+        // Explicit PRNG algorithm avoids depending on System.Random implementation versions.
+        uint state = unchecked((uint)args.Seed.Value) ^ 0x9e3779b9;
+        double Random()
+        {
+            state = unchecked(state * 1664525u + 1013904223u);
+            return state / 4294967296d;
+        }
+        // Minimum-distance repulsion alone lands below the clumping that shipped maps show
+        // (measured index 0.92 against a corpus range of 2.4-3.8), so objects are drawn from
+        // seeded clusters and only jittered within them. Clusters of 0 keeps the old behaviour
+        // and reports the index it produces, rather than silently changing existing output.
+        var allowed = new HashSet<(int X, int Y)>(cells);
+        var clusterCentres = new List<(int X, int Y)>();
+        if (args.Clusters > 0)
+        {
+            var separation = Math.Max(args.ClusterRadiusCells * 2.0, args.ClusterSpacingCells);
+            for (var attempt = 0; attempt < args.Clusters * 200 && clusterCentres.Count < args.Clusters; attempt++)
+            {
+                var candidate = cells[(int)(Random() * cells.Count)];
+                var tooClose = false;
+                foreach (var centre in clusterCentres)
+                {
+                    if (Math.Pow(centre.X - candidate.X, 2) + Math.Pow(centre.Y - candidate.Y, 2) < separation * separation)
+                    { tooClose = true; break; }
+                }
+                if (!tooClose) clusterCentres.Add(candidate);
+            }
+        }
+        (int X, int Y) PickCell()
+        {
+            if (clusterCentres.Count == 0) return cells[(int)(Random() * cells.Count)];
+            var centre = clusterCentres[(int)(Random() * clusterCentres.Count)];
+            for (var tries = 0; tries < 24; tries++)
+            {
+                var angle = Random() * Math.PI * 2;
+                var radius = Math.Sqrt(Random()) * args.ClusterRadiusCells;
+                var candidate = ((int)Math.Floor(centre.X + Math.Cos(angle) * radius),
+                                 (int)Math.Floor(centre.Y + Math.Sin(angle) * radius));
+                if (allowed.Contains(candidate)) return candidate;
+            }
+            return cells[(int)(Random() * cells.Count)];
+        }
+
+        var placements = new List<(float X, float Y, string Type, float Angle)>();
+        var attempts = 0;
+        for (; attempts < args.Count * 100 && placements.Count < args.Count; attempts++)
+        {
+            token.ThrowIfCancellationRequested();
+            var cell = PickCell();
+            var mapX = cell.X + .05f + (float)Random() * .9f;
+            var mapY = cell.Y + .05f + (float)Random() * .9f;
+            if (polygon != null)
+            {
+                var offset = args.Region.Space == "playableGrid" ? border : 0;
+                if (!polygon.Contains(mapX - offset, mapY - offset)) continue;
+            }
+            if (args.Region.Kind == "circle")
+            {
+                var offset = args.Region.Space == "playableGrid" ? border : 0;
+                if (Math.Pow(mapX - args.Region.CenterX - offset, 2) + Math.Pow(mapY - args.Region.CenterY - offset, 2)
+                    > Math.Pow(args.Region.Radius, 2)) continue;
+            }
+            var x = mapX - border; var y = mapY - border;
+            if (!HasSpace(x, y)) continue;
+            var type = args.TypeNames[(int)(Random() * args.TypeNames.Length)];
+            var angle = (float)(Random() * Math.PI * 2);
+            if (footprintSet != null)
+            {
+                var boxes = footprintSet.At(type, x, y, angle);
+                if (!FootprintHasSpace(boxes)) continue;
+                occupied.AddRange(boxes);
+            }
+            placements.Add((x, y, type, angle));
+            Insert(x, y);
+        }
+        if (placements.Count != args.Count)
+            throw new AutomationException("PLACEMENT_FAILED", $"在有限采样次数内只能放置 {placements.Count}/{args.Count} 个对象；请降低数量、间距或扩大区域。");
+        var ids = new List<string>();
+        foreach (var p in placements)
+        {
+            token.ThrowIfCancellationRequested();
+            var obj = map.AddUnitObject(p.Type, p.X * 10, p.Y * 10, 0);
+            obj.Angle = MapAngles.ToDegrees(p.Angle);
+            ids.Add(session.Handles.RegisterNewUnit());
+        }
+        // Reported so the caller can see whether the layout matches what shipped maps look like,
+        // instead of discovering it later in a review.
+        var clumpingIndex = MapArtProfile.MeasureClumping(
+            map.GetUnitObjects().Select(o => (o.Position.X / 10d, o.Position.Y / 10d)).ToList(),
+            map.MapPlayableWidth, map.MapPlayableHeight);
+        return Task.FromResult<object?>(new { objectIds = ids, placed = ids.Count, attempts, seed = args.Seed,
+            clustering = clusterCentres.Count > 0 ? "clustered" : "uniform",
+            clusters = clusterCentres.Count,
+            clumpingIndex = Math.Round(clumpingIndex, 3),
+            algorithm = "lcg32-cell-jitter-v2", catalogHash = _catalog?.ContentHash,
+            assetValidation = _catalog == null ? "unverified" : "editor-declared",
+            exclusionModel = "whole-selected-cells", spacingModel = footprintSet == null ? "object-centers" : "object-centers-and-explicit-oriented-rectangles-v1",
+            footprintSource,
+            footprintProfileHash = footprints == null ? null : ContentHasher.HashBytes(JsonSerializer.SerializeToUtf8Bytes(footprints, AutomationJson.Options)),
+            notEvaluated = footprintSet == null ? new[] { "objectFootprints", "exactCollision", "gameMovementRules", "automaticGroundAttachment" }
+                : new[] { "profileAccuracy", "engineCollision", "miningBehavior", "gameMovementRules", "automaticGroundAttachment" },
+            waterEvaluated = args.Profile.WaterLevel.HasValue });
+    }
+
+    private sealed class ScatterArgs
+    {
+        public GridRegion? Region { get; set; }
+        public GridRegion[] Exclusions { get; set; } = Array.Empty<GridRegion>();
+        public TerrainMovementProfile? Profile { get; set; }
+        public int? Seed { get; set; }
+        public int Count { get; set; }
+        public float MinDistanceCells { get; set; } = 2;
+        public string[]? TypeNames { get; set; }
+        public string? CatalogHash { get; set; }
+        public ObjectFootprint[]? Footprints { get; set; }
+
+        /// <summary>Grove count. Zero keeps the evenly spaced behaviour and reports its index.</summary>
+        public int Clusters { get; set; }
+
+        public int ClusterRadiusCells { get; set; } = 14;
+
+        public int ClusterSpacingCells { get; set; } = 40;
+    }
+}

@@ -1,0 +1,36 @@
+{
+  "name": "floating-island-level-transition",
+  "pieces": [
+    {
+      "typeName": "FI_EdgePiece27",
+      "lengthCells": 5,
+      "depthCells": 11.20411720275879,
+      "angleOffsetDegrees": 0,
+      "normalOffsetCells": -0.6019413986206055,
+      "originOffsetAlongCells": 0,
+      "originOffsetNormalCells": -1.3980586013793945,
+      "zOffset": 75
+    },
+    {
+      "typeName": "FI_EdgePiece28",
+      "lengthCells": 2.5,
+      "depthCells": 11.20411720275879,
+      "angleOffsetDegrees": 0,
+      "normalOffsetCells": -0.6019413986206055,
+      "originOffsetAlongCells": 0,
+      "originOffsetNormalCells": -1.3980586013793945,
+      "zOffset": 75
+    },
+    {
+      "typeName": "FI_EdgePiece26",
+      "role": "outerCorner",
+      "lengthCells": 13.218663787841802,
+      "depthCells": 11.06395839794314,
+      "angleOffsetDegrees": 0,
+      "normalOffsetCells": 0,
+      "originOffsetAlongCells": 2.390668869018555,
+      "originOffsetNormalCells": 0.48356975546394165,
+      "zOffset": 75
+    }
+  ]
+}

@@ -526,7 +526,8 @@ public class PlayerData: Ra3MapWritable
                 return null;
             }
 
-            return InvertedPlayerColor[color.Value];
+            return InvertedPlayerColor.TryGetValue(color.Value, out var name)
+                ? name : "#" + unchecked((uint)color.Value).ToString("X8");
         }
         set
         {
@@ -536,7 +537,7 @@ public class PlayerData: Ra3MapWritable
             }
             else
             {
-                Properties.PutProperty("playerColor", PlayerColor[value]);
+                Properties.PutProperty("playerColor", ParsePlayerColor(value));
             }
         }
     }
@@ -552,7 +553,8 @@ public class PlayerData: Ra3MapWritable
                 return null;
             }
 
-            return InvertedPlayerColor[color.Value];
+            return InvertedPlayerColor.TryGetValue(color.Value, out var name)
+                ? name : "#" + unchecked((uint)color.Value).ToString("X8");
         }
         set
         {
@@ -562,9 +564,44 @@ public class PlayerData: Ra3MapWritable
             }
             else
             {
-                Properties.PutProperty("playerRadarColor", PlayerColor[value]);
+                Properties.PutProperty("playerRadarColor", ParsePlayerColor(value));
             }
         }
+    }
+
+    /// <summary>Raw ARGB, preserving custom colors. Null removes the property.</summary>
+    [JsonIgnore]
+    public uint? ColorArgb
+    {
+        get => Properties.GetProperty<int?>("playerColor") is { } value ? unchecked((uint)value) : null;
+        set
+        {
+            if (value is { } color) Properties.PutProperty("playerColor", unchecked((int)color));
+            else Properties.RemoveProperty("playerColor");
+        }
+    }
+
+    /// <summary>Raw radar ARGB, independent from the model recolor.</summary>
+    [JsonIgnore]
+    public uint? RadarColorArgb
+    {
+        get => Properties.GetProperty<int?>("playerRadarColor") is { } value ? unchecked((uint)value) : null;
+        set
+        {
+            if (value is { } color) Properties.PutProperty("playerRadarColor", unchecked((int)color));
+            else Properties.RemoveProperty("playerRadarColor");
+        }
+    }
+
+    private static int ParsePlayerColor(string value)
+    {
+        // Public preset dictionaries remain extensible by existing callers.
+        if (PlayerColor.TryGetValue(value, out var known)) return known;
+        if (value.Length == 9 && value[0] == '#' && uint.TryParse(value.Substring(1),
+            System.Globalization.NumberStyles.AllowHexSpecifier, System.Globalization.CultureInfo.InvariantCulture, out var argb))
+            return unchecked((int)argb);
+        // Preserve the historical spelling and inverse lookup; accept Gold as an alias.
+        return PlayerColor[value == "Gold" ? "Glod" : value];
     }
 
     public static Dictionary<string, int> PlayerColor = new Dictionary<string, int>()

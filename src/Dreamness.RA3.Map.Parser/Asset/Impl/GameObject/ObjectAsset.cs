@@ -26,6 +26,7 @@ public class ObjectAsset: BaseAsset
     }
     
     private float _angle;
+    private float? _sourceAngleRadians;
 
     public float Angle
     {
@@ -35,6 +36,7 @@ public class ObjectAsset: BaseAsset
             if (_angle != value)
             {
                 _angle = value;
+                _sourceAngleRadians = null;
                 MarkModified();
             }
         }
@@ -188,6 +190,7 @@ public class ObjectAsset: BaseAsset
         
         asset._position = _position;
         asset._angle = _angle;
+        asset._sourceAngleRadians = _sourceAngleRadians;
         asset._roadOption = _roadOption;
         asset._typeName = _typeName;
         asset.Properties = Properties.Clone(context);
@@ -204,7 +207,8 @@ public class ObjectAsset: BaseAsset
         
         _position = binaryReader.ReadVec3D();
         ObservableUtil.Subscribe(_position, this);
-        _angle = binaryReader.ReadSingle() * 180f / (float)Math.PI;
+        _sourceAngleRadians = binaryReader.ReadSingle();
+        _angle = _sourceAngleRadians.Value * 180f / (float)Math.PI;
         _roadOption = binaryReader.ReadInt32();
         _typeName = binaryReader.ReadDefaultString();
         Properties = AssetProperties.FromBinaryReader(binaryReader, context);
@@ -217,7 +221,7 @@ public class ObjectAsset: BaseAsset
         using var binaryWriter = new BinaryWriter(memoryStream);
         
         binaryWriter.WriteVec3D(_position, context);
-        binaryWriter.Write((float)(_angle * Math.PI / 180f));
+        binaryWriter.Write(_sourceAngleRadians ?? (float)(_angle * Math.PI / 180f));
         binaryWriter.Write(_roadOption);
         binaryWriter.WriteDefaultString(_typeName);
         binaryWriter.Write(Properties.ToBytes(context));

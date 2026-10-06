@@ -13,6 +13,20 @@ public readonly struct RoadOptions : IEquatable<RoadOptions>
 
     public int RawValue { get; }
 
+    public const int RoadStartBit = 2;
+    public const int RoadEndBit = 4;
+    public const int BridgeStartBit = 16;
+    public const int BridgeEndBit = 32;
+
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool IsRoadStart => ContainsBits(RoadStartBit);
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool IsRoadEnd => ContainsBits(RoadEndBit);
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool IsBridgeStart => ContainsBits(BridgeStartBit);
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool IsBridgeEnd => ContainsBits(BridgeEndBit);
+
     public bool IsRoad => RawValue != 0;
 
     public bool ContainsBits(int bits) => (RawValue & bits) == bits;

@@ -160,6 +160,9 @@ public class BlendTileDataAsset: BaseAsset
         ObservableUtil.Subscribe(Tiles, this);
         ObservableUtil.Subscribe(Blends, this);
         ObservableUtil.Subscribe(SingleEdgeBlends, this);
+        // Decoding non-default flags used the indexer before observers were attached.
+        // Reset the decode-time dirty bit so the next edit can notify its parent.
+        Passabilities._modified = false;
         ObservableUtil.Subscribe(Passabilities, this);
         ObservableUtil.Subscribe(CliffBlends, this);
         ObservableUtil.Subscribe(PassageWidths, this);
@@ -208,8 +211,8 @@ public class BlendTileDataAsset: BaseAsset
         }
         IOUtility.WriteArray(binaryWriter, impassable);
         IOUtility.WriteArray(binaryWriter, impassableToPlayers);
-        IOUtility.WriteArray(binaryWriter, extraPassable);
         IOUtility.WriteArray(binaryWriter, PassageWidths.Array);
+        IOUtility.WriteArray(binaryWriter, extraPassable);
         IOUtility.WriteArray(binaryWriter, Visibilities.Array);
         IOUtility.WriteArray(binaryWriter, Buildabilities.Array);
         IOUtility.WriteArray(binaryWriter, impassableToAirUnits);
@@ -371,62 +374,45 @@ public class BlendTileDataAsset: BaseAsset
         return Textures[tile].Name;
     }
     
-    public void UpdatePassabilityMap(BaseContext context)
+    /// <summary>
+    /// Rebuild ordinary terrain passability using 45 degrees and a one-cell cardinal halo.
+    /// Special flags are retained. This does not model water, objects or game unit movement.
+    /// </summary>
+    public void UpdatePassabilityMap(BaseContext context) => UpdatePassabilityMap(context, 45, true);
+
+    public void UpdatePassabilityMap(BaseContext context, float maxSlopeDegrees, bool expandCardinalHalo)
     {
-        var elev = (context.AssetDict[AssetNameConst.HeightMapData] as HeightMapDataAsset).Elevations;
-        double a = 45;
-        float tan = (float)Math.Tan(a);
-        // impassiableCount = 0;
-        for (int y = 0; y < mapHeight; y++)
+        if (!float.IsFinite(maxSlopeDegrees) || maxSlopeDegrees < 0 || maxSlopeDegrees >= 90)
+            throw new ArgumentOutOfRangeException(nameof(maxSlopeDegrees));
+        var heights = context.AssetDict[AssetNameConst.HeightMapData] as HeightMapDataAsset
+            ?? throw new ArgumentException("HeightMapData is required.", nameof(context));
+        if (heights.MapWidth != mapWidth || heights.MapHeight != mapHeight)
+            throw new ArgumentException("Height and texture dimensions differ.", nameof(context));
+        var limit = Math.Tan(maxSlopeDegrees * Math.PI / 180d);
+        var blocked = new bool[mapWidth, mapHeight];
+        // Mark both endpoints of each steep edge before writing any output cell.
+        for (var y = 0; y < mapHeight; y++)
+        for (var x = 0; x < mapWidth; x++)
         {
-            for (int x = 0; x < mapWidth; x++)
-            {
-                int passages = 0;
-                if (x > 0 && Math.Abs((elev[x, y] - elev[x - 1, y]) / 10f) < tan)
-                {
-                    passages++;
-                }
-                if (x < mapWidth - 1 && Math.Abs((elev[x, y] - elev[x + 1, y]) / 10f) < tan)
-                {
-                    passages++;
-                }
-                if (y > 0 && Math.Abs((elev[x, y] - elev[x, y - 1]) / 10f) < tan)
-                {
-                    passages++;
-                }
-                if (y < mapHeight - 1 && Math.Abs((elev[x, y] - elev[x, y + 1]) / 10f) < tan)
-                {
-                    passages++;
-                }
-                if (passages < 4)
-                {
-                    Passabilities[x, y] = Passability.Impassable;
-                    // impassiableCount++;
-                    if (x > 0)
-                    {
-                        Passabilities[x - 1, y] = Passability.Impassable;
-                    }
-                    if (x < mapWidth - 1)
-                    {
-                        Passabilities[x + 1, y] = Passability.Impassable;
-                    }
-                    if (y > 0)
-                    {
-                        Passabilities[x, y - 1] = Passability.Impassable;
-                    }
-                    if (y < mapHeight - 1)
-                    {
-                        Passabilities[x, y + 1] = Passability.Impassable;
-                    }
-                }
-                else
-                {
-                    Passabilities[x, y] = Passability.Passable;
-                }
-            }
+            var height = heights.Elevations[x, y];
+            if (!float.IsFinite(height)) throw new ArgumentException("Terrain height is not finite.", nameof(context));
+            if (x + 1 < mapWidth && Math.Abs(height - heights.Elevations[x + 1, y]) / 10d > limit + 1e-6)
+                blocked[x, y] = blocked[x + 1, y] = true;
+            if (y + 1 < mapHeight && Math.Abs(height - heights.Elevations[x, y + 1]) / 10d > limit + 1e-6)
+                blocked[x, y] = blocked[x, y + 1] = true;
+        }
+        for (var y = 0; y < mapHeight; y++)
+        for (var x = 0; x < mapWidth; x++)
+        {
+            // Preserve explicit player/air restrictions and ExtraPassable overrides.
+            if (Passabilities[x, y] is not (Passability.Passable or Passability.Impassable)) continue;
+            var impassable = blocked[x, y] || (expandCardinalHalo &&
+                ((x > 0 && blocked[x - 1, y]) || (x + 1 < mapWidth && blocked[x + 1, y])
+                || (y > 0 && blocked[x, y - 1]) || (y + 1 < mapHeight && blocked[x, y + 1])));
+            Passabilities[x, y] = impassable ? Passability.Impassable : Passability.Passable;
         }
     }
-    
+
     public bool[,] GetImpassible()
     {
         bool[,] res = new bool[mapWidth, mapHeight];

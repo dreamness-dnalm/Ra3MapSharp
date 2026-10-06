@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "style": "floating-island",
+  "excludedTypes": [
+    {
+      "typeName": "FI_EdgePiece19",
+      "reason": "User requested exclusion after the real calibration render showed a black model.",
+      "evidence": "artifacts/cliff-workflow/20261003/CliffCalibration/CliffCalibration.overview.png",
+      "calibrationOriginPlayableGrid": { "x": 64, "y": 96 }
+    }
+  ]
+}

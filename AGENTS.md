@@ -18,6 +18,16 @@
   - 地图可视化能力（如预览图输出），依赖 Facade。
 - `Dreamness.RA3.Map.Lua`
   - Lua 语法相关能力（ANTLR）。
+- `Dreamness.RA3.Map.Automation`
+  - **面向 AI Agent 的命令内核（WoWA）**：会话/修订/事务/撤销重做、请求去重、对象句柄、候选（prepared plan）、设计实体、依赖图、保护区域、几何与地形算子。
+  - 不依赖 Facade 之外的 UI；纯确定性、可回放，是"编辑器能力"的机器可调用形态。
+  - 入口概念：`CommandRegistry`（注册全部命令）、`AgentRuntime`（会话与作业宿主）。
+- `Dreamness.RA3.Map.Agent`
+  - **Agent 宿主**：MCP stdio 服务（`Protocol/McpServer.cs`）+ JSONL/批处理模式，工具定义在 `Protocol/command-schemas.json`。
+  - 渲染：`Rendering/{DiagnosticRenderer,WorldBuilderRenderer,PreviewInspection}.cs`。诊断图纯托管；真实鸟瞰图交给外部 `WbLauncher.exe`。
+  - 评审闭环：`art.profile` 用与语料分析**同一份代码**测量当前地图；`review.render_set` 渲染总览 + 4 张固定比例局部并合成一张评审大图，同时对同一修订产出 rubric（每条检查写明实测值、阈值与阈值出处）。`combatReadability` 为 not-evaluated；`materialCohesion` / `patchNaturalness` / `landmarkPresence` 以及 1–P25 的 `clumping` 为 descriptive（只报告、不判分）。紧凑度曾用来抓圆形印章，实测会奖励噪声，故不再判分。
+  - 美术规则：`--analyze-corpus --corpus <origin_maps>` 从 shipped 地图语料量出材质/密度/聚簇阈值，`art.rules` 汇报（含实测纹理配对）。单图解析失败会记为 failure 而不中断整轮。
+  - 素材目录与图册：`--build-catalog` 生成 `<artifacts>/catalog/catalog.json`，`--build-album <artifacts>/album` 生成物体外观图册（并附一张**空网格参考渲染**），`--build-footprints` 由图册量得占地；宿主自动加载，由 `assets.catalog_info` / `assets.search` / `assets.album` / `footprints.get|list|set` 提供。`objects.scatter` 在未传 `footprints` 且相关类型全部有量测时自动取用目录值。
 
 ### 1.2 测试项目（`test/`）
 
@@ -26,11 +36,14 @@
 - `Dreamness.Ra3.Map.Transform.Test` -> 测试 Transform。
 - `Dreamness.Ra3.Map.Visualization.Test` -> 测试 Visualization。
 - `Dreamness.RA3.Map.Lua.Test` -> 测试 Lua。
+- `Dreamness.RA3.Map.Automation.Test` -> 测试 Automation 命令内核（不依赖本机 RA3 数据）。
+- `Dreamness.RA3.Map.Agent.Test` -> 测试 Agent 协议与渲染装配（不依赖本机 RA3 数据）。
 
 ### 1.3 依赖关系（核心方向）
 
 - `Parser` <- `Facade` <- (`Transform`, `Visualization`)
-- `Lua` 独立，不依赖上述链路。
+- `Facade` <- `Automation` <- `Agent`
+- `Lua` 独立，不依赖上述链路；`Automation` 目前不依赖 `Lua`。
 
 ## 2. 环境与前置条件
 
@@ -39,6 +52,11 @@
 - 构建系统：`dotnet` CLI + solution `Ra3MapSharp.sln`。
 - 仓库全局配置：`Directory.Build.props`（版本、打包元信息、符号包、SourceLink 等）。
 - 若执行部分 Facade/Transform/Visualization 测试，需要本机存在 RA3 地图目录数据（见 `Ra3PathUtil.RA3MapFolder`）。
+- 真实鸟瞰图（`preview.start` / `--export-overview`）需要外部 `WbLauncher.exe`（新地编启动器），路径通过 `--launcher` 参数或环境变量 `RA3_WB_LAUNCHER` 指定；缺失时文件编辑仍可用，仅真实渲染不可用。
+- 控制台脚本注意：本机只有 **Windows PowerShell 5.1**（无 pwsh 7）。无 BOM 的 `.ps1` 会被按 ANSI 读取而导致中文乱码与解析失败，仓库内 `scripts/*.ps1` 一律保存为 **UTF-8 with BOM**，且避免使用 .NET Core 专属 API（`ProcessStartInfo.ArgumentList`、`StandardInputEncoding`、`ConvertFrom-Json -Depth`）。
+- **改完 `.ps1` 要重新确认 BOM**：编辑工具写出的是**无 BOM** 的 UTF-8。含中文的 `scripts/*.ps1` 被编辑后 BOM 会丢失，PowerShell 5.1 随即按 ANSI 读取，报 `Unexpected token` 之类的解析错误（错误信息本身还会显示为乱码）。改完用 `[System.IO.File]::ReadAllBytes($p)[0..2]` 确认首字节是 `239,187,191`，不是就用 `[System.IO.File]::WriteAllText($p, (Get-Content $p -Raw), (New-Object System.Text.UTF8Encoding($true)))` 写回。
+- **协议层的 BOM 坑**：宿主曾因首条 JSONL 消息前缀的 UTF-8 BOM 而让**整个会话的第一个请求**必失败，错误信息是具有误导性的 `'0xEF' is an invalid start of a value`。现已由 `AgentJson.WithoutBom` 容忍（有测试）。写客户端或测试脚本时，注意 `function F($x, $args)` 这类把 `$args`（PowerShell 自动变量）当参数名的写法会让它变成数组，且 `$null = F ...` 会吞掉函数内所有 `Write-Output`。
+- **反方向的 BOM 坑**：`Set-Content -Encoding UTF8` 会**写出** BOM。外部工具的 JSON 配置不接受 BOM——给地编启动器的 `data/config/map-task-launch.json` 写配置时，用 `Set-Content` 会让渲染在 2 秒内失败并报 `'0xEF' is an invalid start of a value. LineNumber: 0`。写这类文件必须用 `[System.IO.File]::WriteAllText($path, $json, (New-Object System.Text.UTF8Encoding($false)))`，改完用 `[System.IO.File]::ReadAllBytes($path)[0..2]` 确认首字节不是 `239,187,191`。
 
 ## 3. 常用命令
 
@@ -58,6 +76,13 @@ dotnet build src/Dreamness.RA3.Map.Parser/Dreamness.RA3.Map.Parser.csproj
 # 稳定、推荐优先执行
 dotnet test test/Dreamness.Ra3.Map.Parser.Test/Dreamness.Ra3.Map.Parser.Test.csproj --no-restore
 dotnet test test/Dreamness.RA3.Map.Lua.Test/Dreamness.RA3.Map.Lua.Test.csproj --no-restore
+
+# Automation / Agent（同样稳定；UsageExamples 类是文档性用例，默认排除）
+dotnet test test/Dreamness.RA3.Map.Automation.Test/Dreamness.RA3.Map.Automation.Test.csproj --no-restore --filter "TestCategory!=UsageExamples"
+dotnet test test/Dreamness.RA3.Map.Agent.Test/Dreamness.RA3.Map.Agent.Test.csproj --no-restore
+
+# MCP 端到端连通性探测（握手 + 工具清单；加 -Render 会真正调用 WbLauncher 出图）
+powershell -NoProfile -File scripts/mcp_probe.ps1 -Smoke
 
 # 环境依赖较强（需本机 RA3 地图数据）
 dotnet test test/Dreamness.Ra3.Map.Facade.Test/Dreamness.Ra3.Map.Facade.Test.csproj --no-restore
@@ -85,6 +110,8 @@ dotnet pack Ra3MapSharp.sln -c Release
 
 - `Parser.Test`
 - `Lua.Test`
+- `Automation.Test`（`--filter "TestCategory!=UsageExamples"`）
+- `Agent.Test`
 
 这些测试通常不依赖本机 RA3 安装目录中的真实地图文件。
 
@@ -142,6 +169,15 @@ dotnet pack Ra3MapSharp.sln -c Release
 - 改 `Visualization`：
   - `dotnet build src/Dreamness.Ra3.Map.Visualization/Dreamness.Ra3.Map.Visualization.csproj --no-restore`
   - 如有环境，补跑 `Visualization.Test`。
+- 改 `Automation`：
+  - `dotnet build src/Dreamness.RA3.Map.Automation/Dreamness.RA3.Map.Automation.csproj --no-restore`
+  - `dotnet test test/Dreamness.RA3.Map.Automation.Test/Dreamness.RA3.Map.Automation.Test.csproj --no-restore --filter "TestCategory!=UsageExamples"`
+  - 新增/修改命令时**必须同步 `src/Dreamness.RA3.Map.Agent/Protocol/command-schemas.json`**，否则工具描述与参数校验不一致。
+- **跑 CLI 前必须重建 Agent 项目**：命令行入口是 `src/Dreamness.RA3.Map.Agent` 的 DLL，它引用 Automation。只 build Automation 的话 CLI 仍用旧副本，表现为「改了代码但输出完全没变」。
+- 改 `Agent`（含 MCP 协议、渲染装配、`command-schemas.json`）：
+  - `dotnet build src/Dreamness.RA3.Map.Agent/Dreamness.RA3.Map.Agent.csproj --no-restore`
+  - `dotnet test test/Dreamness.RA3.Map.Agent.Test/Dreamness.RA3.Map.Agent.Test.csproj --no-restore`
+  - `powershell -NoProfile -File scripts/mcp_probe.ps1 -Smoke`（真实渲染链路改动时加 `-Render`）
 
 ## 7. 发布与打包
 
@@ -156,7 +192,9 @@ dotnet pack Ra3MapSharp.sln -c Release
 
 - `dotnet test Ra3MapSharp.sln` 在当前环境下可能耗时极长或出现卡住，不作为默认入口命令。
 - 部分测试项目（特别是 Facade/Transform/Visualization）强依赖本机 RA3 地图数据与具体地图名，CI 或新机器上不可直接复现。
-- 当前仓库存在一个未跟踪文件 `nul`，通常应避免将其纳入提交。
+- 当前仓库曾存在一个未跟踪的保留名文件 `nul`（某次误重定向产生，内容为 `del: command not found`），已于 2026-09-18 清理；提交前请确认 `git status` 不再出现它。
+- `Automation` 的会话历史索引（`.automation/History/index.json`，schemaVersion 9）**在磁盘上按修订增量存储**：每个修订只写负载真正变化的设计实体与被移除的实体 id，读取时前向回填为完整状态。同一负载（1 个 200×200 platform + 120 个对象、4 次修订）由 21.9 MB 降到 1.73 MB，每修订增量由约 +5.5 MB 降到约 +8 KB。**内存中每个修订仍保留完整状态**（撤销/重做是直接查表），故长会话 RSS 仍随"修订数 × 设计实体总面积"增长；`waypointObjectIds`/`unitObjectIds` 也仍按修订全量存储。改这块时**务必保持 `DesignHash()` 的算法不变**，否则现存工作区会被误判为"设计已脏"。
+- `preview.start` 是**作业制**：返回 `jobId` 后需轮询 `jobs.status`；前端进程必须保持 stdin 打开，EOF 会取消未完成作业。
 
 ## 9. 与 `CLAUDE.md` 的关系
 
