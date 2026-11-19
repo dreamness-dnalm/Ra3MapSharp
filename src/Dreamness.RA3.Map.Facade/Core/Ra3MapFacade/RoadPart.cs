@@ -18,7 +18,8 @@ public partial class Ra3MapFacade
     }
 
     /// <summary>
-    /// 添加 World Builder 路径节点。原始 road option 原样保留，各位含义尚未完全文档化。
+    /// 添加 World Builder 路径节点。原始 road option 原样保留。
+    /// 已核验位见 <see cref="RoadOptions"/>（起终点、桥梁、拐角、尾部）。
     /// </summary>
     public RoadObjectWrap AddRoadObject(string typeName, float x, float y, float z = 0,
         float angle = 0, int roadOption = 2)
@@ -59,9 +60,7 @@ public partial class Ra3MapFacade
         ArgumentNullException.ThrowIfNull(start);
         ArgumentNullException.ThrowIfNull(end);
         if (string.IsNullOrWhiteSpace(typeName)) throw new ArgumentException("A type name is required.", nameof(typeName));
-        const int endpointBits = RoadOptions.RoadStartBit | RoadOptions.RoadEndBit
-            | RoadOptions.BridgeStartBit | RoadOptions.BridgeEndBit;
-        if ((additionalOptions & endpointBits) != 0)
+        if ((additionalOptions & RoadOptions.EndpointBitsMask) != 0)
             throw new ArgumentException("Additional options cannot contain endpoint bits.", nameof(additionalOptions));
         if (!float.IsFinite(start.X) || !float.IsFinite(start.Y) || !float.IsFinite(start.Z)
             || !float.IsFinite(end.X) || !float.IsFinite(end.Y) || !float.IsFinite(end.Z)

@@ -3,6 +3,7 @@ using Dreamness.Ra3.Map.Parser.Asset.Collection;
 using Dreamness.Ra3.Map.Parser.Asset.Collection.Dim1Array;
 using Dreamness.Ra3.Map.Parser.Core.Base;
 using Dreamness.Ra3.Map.Parser.Util;
+using Dreamness.Ra3.Map.Parser.Asset.Util;
 
 namespace Dreamness.Ra3.Map.Parser.Asset.Impl.PostEffect;
 
@@ -20,8 +21,10 @@ public class PostEffect: Ra3MapWritable
         ObservableUtil.Subscribe(Parameters, this);
     }
     
-    private static PostEffect Of(string name, PostEffectParameter[] parameters)
+    public static PostEffect Of(string name, PostEffectParameter[] parameters)
     {
+        ArgumentNullException.ThrowIfNull(name);
+        ArgumentNullException.ThrowIfNull(parameters);
         var postEffectParameters = new WritableList<PostEffectParameter>();
         foreach (var parameter in parameters)
         {
@@ -57,16 +60,20 @@ public class PostEffect: Ra3MapWritable
     
     public static PostEffect FromBinaryReader(BinaryReader binaryReader, BaseContext context)
     {
-        var name = binaryReader.ReadDefaultString();
-        var parameterCount = binaryReader.ReadInt32();
+        var start = binaryReader.BaseStream.Position;
+        var name = AssetReadUtility.ReadString(binaryReader);
+        var parameterCount = AssetReadUtility.ReadCount(binaryReader, 4);
         
         var parameters = new WritableList<PostEffectParameter>();
         for (var i = 0; i < parameterCount; i++)
         {
-            parameters.Add(PostEffectParameter.FromBinaryReader(binaryReader, context));
+            parameters.Add(PostEffectParameter.FromBinaryReader(binaryReader, context), ignoreModified: true);
         }
         
-        return new PostEffect(name, parameters);
+        var end = binaryReader.BaseStream.Position;
+        binaryReader.BaseStream.Position = start;
+        var effect = new PostEffect(name, parameters) { Data = binaryReader.ReadBytes(checked((int)(end - start))) };
+        return effect;
     }
     
     
@@ -77,7 +84,7 @@ public class PostEffect: Ra3MapWritable
             using var memoryStream = new MemoryStream();
             using var binaryWriter = new BinaryWriter(memoryStream);
             
-            binaryWriter.WriteDefaultString(Name);
+            AssetReadUtility.WriteString(binaryWriter, Name);
             binaryWriter.Write(Parameters.Count);
             binaryWriter.Write(Parameters.ToBytes(context));
             

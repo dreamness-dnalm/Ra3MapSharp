@@ -313,22 +313,34 @@ public class Compression
         if (compressedLength + 6 < input.Length)
         {
             int chunkPosition;
+            var large = input.Length > 0xFFFFFF;
+            var headerLength = large ? 6 : 5;
 
-            output = new byte[compressedLength + 14 + (endIsValid ? 0 : 1)];
+            output = new byte[compressedLength + 8 + headerLength + (endIsValid ? 0 : 1)];
             // "EAR\0"
             Array.Copy(Encoding.ASCII.GetBytes("EAR\0"), 0, output, 0, 4);
             // 未压缩长度（小端）
             Array.Copy(getIntByteArray(input.Length), 0, output, 4, 4);
-            // 标志位
-            //统一用0x80大文件标志
-            output[8] = 0x80;
-            output[9] = 0xFB;
-            // 大端
-            output[10] = (byte)(input.Length >> 24);
-            output[11] = (byte)(input.Length >> 16);
-            output[12] = (byte)(input.Length >> 8);
-            output[13] = (byte)(input.Length);
-            chunkPosition = 14;
+            // 官方小图用 0x10 和 3 字节长度；超过 16MB 才用 0x80 和 4 字节长度。
+            if (large)
+            {
+                output[8] = 0x80;
+                output[9] = 0xFB;
+                output[10] = (byte)(input.Length >> 24);
+                output[11] = (byte)(input.Length >> 16);
+                output[12] = (byte)(input.Length >> 8);
+                output[13] = (byte)input.Length;
+                chunkPosition = 14;
+            }
+            else
+            {
+                output[8] = 0x10;
+                output[9] = 0xFB;
+                output[10] = (byte)(input.Length >> 16);
+                output[11] = (byte)(input.Length >> 8);
+                output[12] = (byte)input.Length;
+                chunkPosition = 13;
+            }
 
             foreach (byte[] t in compressedChunks)
             {

@@ -4,6 +4,7 @@ using Dreamness.Ra3.Map.Parser.Asset.Collection.Dim1Array;
 using Dreamness.Ra3.Map.Parser.Asset.SubAsset;
 using Dreamness.Ra3.Map.Parser.Core.Base;
 using Dreamness.Ra3.Map.Parser.Util;
+using Dreamness.Ra3.Map.Parser.Asset.Util;
 
 namespace Dreamness.Ra3.Map.Parser.Asset.Impl.Lighting;
 
@@ -25,6 +26,8 @@ public class GlobalLightingAsset: BaseAsset
     }
     
     public WritableList<GlobalLightingConfig> Configs { get; private set; } = new WritableList<GlobalLightingConfig>();
+
+    public GlobalLightingAsset() => ObservableUtil.Subscribe(Configs, this);
     
     private MapColorArgb shadowColor;
 
@@ -69,6 +72,7 @@ public class GlobalLightingAsset: BaseAsset
 
     protected override void _Parse(BaseContext context)
     {
+        AssetReadUtility.RequireVersion(this, 11);
         using var memoryStream = new MemoryStream(Data);
         using var reader = new BinaryReader(memoryStream);
         
@@ -78,16 +82,18 @@ public class GlobalLightingAsset: BaseAsset
             var config = GlobalLightingConfig.FromBinaryReader(reader, context);
             Configs.Add(config, ignoreModified: true);
         }
-        ObservableUtil.Subscribe(Configs, this);
         
         shadowColor = MapColorArgb.FromBinaryReader(reader);
 
         noCloudFactor = reader.ReadColorRgbF();
+        AssetReadUtility.RequireEnd(reader);
         
     }
 
     protected override byte[] Deparse(BaseContext context)
     {
+        AssetReadUtility.RequireWritable(this);
+        if (Configs.Count != 4) throw new InvalidDataException("GlobalLighting requires four time-of-day configurations.");
         using var memoryStream = new MemoryStream();
         using var binaryWriter = new BinaryWriter(memoryStream);
         
@@ -106,7 +112,6 @@ public class GlobalLightingAsset: BaseAsset
         var asset = new GlobalLightingAsset();
         asset.ApplyBasicInfo(context);
         
-        ObservableUtil.Subscribe(asset.Configs, asset);
 
         asset.time = 1;
         

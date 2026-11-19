@@ -54,18 +54,11 @@ public class AssetProperties: Ra3MapWritable
     
     public void SetProperty(string name, object value)
     {
-        if (PropertiesDict.ContainsKey(name))
-        {
-            if (!PropertiesDict[name].Equals(value))
-            {
-                PropertiesDict[name].Value = value;
-                MarkModified();
-            }
-        }
-        else
-        {
+        if (!PropertiesDict.TryGetValue(name, out var property))
             throw new KeyNotFoundException($"Property '{name}' not found.");
-        }
+        if (Equals(property.Value, value)) return;
+        property.Value = value;
+        MarkModified();
     }
 
     public void PutProperty(string name, object value)

@@ -1,12 +1,14 @@
 using Dreamness.Ra3.Map.Parser.Asset.Base;
 using Dreamness.Ra3.Map.Parser.Core.Base;
 using Dreamness.Ra3.Map.Parser.Util;
+using Dreamness.Ra3.Map.Parser.Asset.Util;
 
 namespace Dreamness.Ra3.Map.Parser.Asset.Impl.PostEffect;
 
 public class PostEffectParameter: Ra3MapWritable
 {
-    public object Value { get; private set; }
+    private object value;
+    public object Value { get => value is float[] floats ? (float[])floats.Clone() : value; private set => this.value = value; }
     
     public string Name { get; private set; }
     
@@ -21,6 +23,9 @@ public class PostEffectParameter: Ra3MapWritable
 
     public static PostEffectParameter Of(string name, string type, object value)
     {
+        ArgumentNullException.ThrowIfNull(name);
+        ValidateValue(type, value);
+        if (value is float[] floats) value = (float[])floats.Clone();
         var postEffectParameter = new PostEffectParameter(name, type, value);
         postEffectParameter.MarkModified();
         return postEffectParameter;
@@ -31,9 +36,9 @@ public class PostEffectParameter: Ra3MapWritable
         using var memoryStream = new MemoryStream();
         using var binaryWriter = new BinaryWriter(memoryStream);
         
-        var name = binaryReader.ReadDefaultString();
+        var name = AssetReadUtility.ReadString(binaryReader);
         binaryWriter.WriteDefaultString(name);
-        var type = binaryReader.ReadDefaultString();
+        var type = AssetReadUtility.ReadString(binaryReader);
         binaryWriter.WriteDefaultString(type);
         object value = null;
         
@@ -54,7 +59,7 @@ public class PostEffectParameter: Ra3MapWritable
                 }
                 break;
             case "Texture":
-                var texture = binaryReader.ReadDefaultString();
+                var texture = AssetReadUtility.ReadString(binaryReader);
                 binaryWriter.WriteDefaultString(texture);
                 value = texture;
                 break;
@@ -70,9 +75,30 @@ public class PostEffectParameter: Ra3MapWritable
         var postEffectParameter = new PostEffectParameter(name, type, value);
         
         binaryWriter.Flush();
-        postEffectParameter.Value = memoryStream.ToArray();
+        postEffectParameter.Data = memoryStream.ToArray();
         
         return postEffectParameter;
+    }
+
+    /// <summary>Updates a typed value and propagates the modification to its effect/map.</summary>
+    public void SetValue(object value)
+    {
+        ValidateValue(Type, value);
+        Value = value is float[] floats ? (float[])floats.Clone() : value;
+        MarkModified();
+    }
+
+    private static void ValidateValue(string type, object value)
+    {
+        var valid = type switch
+        {
+            "Float" => value is float,
+            "Float4" => value is float[] floats && floats.Length == 4,
+            "Texture" => value is string,
+            "Int" => value is int,
+            _ => false
+        };
+        if (!valid) throw new ArgumentException($"Invalid value or unsupported post-effect type '{type}'.", nameof(value));
     }
     
     
@@ -83,8 +109,8 @@ public class PostEffectParameter: Ra3MapWritable
             using var memoryStream = new MemoryStream();
             using var binaryWriter = new BinaryWriter(memoryStream);
             
-            binaryWriter.WriteDefaultString(Name);
-            binaryWriter.WriteDefaultString(Type);
+            AssetReadUtility.WriteString(binaryWriter, Name);
+            AssetReadUtility.WriteString(binaryWriter, Type);
 
             switch (Type)
             {
@@ -105,7 +131,10 @@ public class PostEffectParameter: Ra3MapWritable
                     }
                     break;
                 case "Texture":
-                    binaryWriter.WriteDefaultString((string)Value);
+                    AssetReadUtility.WriteString(binaryWriter, (string)Value);
+                    break;
+                case "Int":
+                    binaryWriter.Write((int)Value);
                     break;
                 default:
                     throw new InvalidDataException("Unknown post-effect type: " + Type);

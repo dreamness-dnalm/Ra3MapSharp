@@ -5,12 +5,15 @@ using Dreamness.Ra3.Map.Parser.Asset.SubAsset;
 using Dreamness.Ra3.Map.Parser.Asset.SubAsset.Impl.Unknown;
 using Dreamness.Ra3.Map.Parser.Core.Base;
 using Dreamness.Ra3.Map.Parser.Util;
+using Dreamness.Ra3.Map.Parser.Asset.Util;
 
 namespace Dreamness.Ra3.Map.Parser.Asset.Impl.Unknown;
 
 public class MPPositionListAsset: BaseAsset
 {
     public WritableList<MPPositionInfo> MPPositionInfos { get; } = new WritableList<MPPositionInfo>();
+
+    public MPPositionListAsset() => ObservableUtil.Subscribe(MPPositionInfos, this);
     
     public override short GetVersion()
     {
@@ -27,15 +30,19 @@ public class MPPositionListAsset: BaseAsset
         using var memoryStream = new MemoryStream(Data);
         using var binaryReader = new BinaryReader(memoryStream);
         
-        for (int i = 0; i < 6; i++)
+        AssetReadUtility.RequireVersion(this, 0);
+        while (binaryReader.BaseStream.Position < binaryReader.BaseStream.Length)
         {
-            MPPositionInfos.Add(MPPositionInfo.FromBinaryReader(binaryReader, context), ignoreModified:true);
+            var item = AssetParser.FromBinaryReader(binaryReader, context);
+            if (item is not MPPositionInfo info || info.Errored)
+                throw new InvalidDataException("Invalid MPPositionInfo record.", item.ErrorException);
+            MPPositionInfos.Add(info, ignoreModified:true);
         }
-        ObservableUtil.Subscribe(MPPositionInfos, this);
     }
 
     protected override byte[] Deparse(BaseContext context)
     {
+        AssetReadUtility.RequireWritable(this);
         return MPPositionInfos.ToBytes(context);
     }
     
@@ -45,7 +52,7 @@ public class MPPositionListAsset: BaseAsset
         
         asset.ApplyBasicInfo(context);
         
-        for (int i = 0; i < 0; i++)
+        for (int i = 0; i < 6; i++)
         {
             asset.MPPositionInfos.Add(MPPositionInfo.Of(true, true, true, UInt32.MaxValue, null, context), ignoreModified:true);
         }

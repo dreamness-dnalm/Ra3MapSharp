@@ -109,17 +109,14 @@ public static class StreamExtension
 
     public static float ReadSageFloat16(this BinaryReader br)
     {
-        var value = br.ReadUInt16();
-        byte upper = (byte)(value >> 8);
-        byte lower = (byte)(value & 0xFFu);
-        return (float)(int)upper * 10f + (float)(int)lower * 9.96f / 256f;
+        return FromSageFloat16(br.ReadUInt16());
     }
     
     public static ushort WriteSageFloat16(this BinaryWriter bw, float value)
     {
-        byte upper = (byte)((value - value % 10f) / 10f);
-        byte lower = (byte)((double)(value % 10f * 256f) / 9.96);
-        return (ushort)((upper << 8) | lower);
+        var encoded = ToSageFloat16(value);
+        bw.Write(encoded);
+        return encoded;
     }
     
     public static T[,] ReadArray<T>(this BinaryReader br, int width, int height) where T : struct
@@ -230,25 +227,27 @@ public static class StreamExtension
         }
     }
 
+    /// <summary>Height represented by one step of the unsigned 16-bit terrain encoding.</summary>
+    public const float SageFloat16Scale = 10f / 256f;
+
+    /// <summary>Largest representable terrain height: 2559.9609375.</summary>
+    public const float SageFloat16MaxValue = ushort.MaxValue * SageFloat16Scale;
+
+    /// <summary>Encodes a terrain height using nearest-step rounding, with midpoints rounded up.</summary>
+    /// <exception cref="ArgumentOutOfRangeException">The height is not finite or is outside the representable range.</exception>
     public static ushort ToSageFloat16(float v)
     {
-        if (!float.IsFinite(v) || v < 0 || v >= 2560)
-            throw new ArgumentOutOfRangeException(nameof(v), "SAGE height must be finite and in [0, 2560).");
-        var upper = (int)Math.Floor(v / 10f);
-        var fractional = ((double)v - upper * 10) * 256 / 9.96;
-        var nearest = (ushort)((upper << 8) | Math.Clamp((int)Math.Round(fractional), 0, 255));
-        // Decoded float values can sit just below their original fractional code.
-        // Preserve every representable value exactly instead of lowering untouched
-        // terrain on each read/edit/save cycle. Other values retain floor quantization.
-        if (FromSageFloat16(nearest) == v) return nearest;
-        return (ushort)((upper << 8) | Math.Clamp((int)Math.Floor(fractional), 0, 255));
+        if (!float.IsFinite(v) || v < 0f || v > SageFloat16MaxValue)
+            throw new ArgumentOutOfRangeException(nameof(v), v,
+                $"Terrain height must be finite and between 0 and {SageFloat16MaxValue}.");
+
+        // Use double precision so rounding cannot move a value just below a midpoint above it.
+        return (ushort)Math.Round((double)v / SageFloat16Scale, MidpointRounding.AwayFromZero);
     }
 
     public static float FromSageFloat16(ushort v)
     {
-        byte upper = (byte)(v >> 8);
-        byte lower = (byte)(v & 0xFFu);
-        return (float)(int)upper * 10f + (float)(int)lower * 9.96f / 256f;
+        return v * SageFloat16Scale;
     }
 }
 

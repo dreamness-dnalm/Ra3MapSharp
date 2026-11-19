@@ -1,10 +1,11 @@
 using Dreamness.Ra3.Map.Parser.Asset.Base;
 using Dreamness.Ra3.Map.Parser.Core.Base;
 using Dreamness.Ra3.Map.Parser.Util;
+using Dreamness.Ra3.Map.Parser.Asset.Util;
 
 namespace Dreamness.Ra3.Map.Parser.Asset.SubAsset.Impl.Unknown;
 
-// TODO: ????
+/// <summary>A multiplayer slot, serialized as a nested MPPositionInfo chunk.</summary>
 public class MPPositionInfo: BaseAsset
 {
     private bool isHuman;
@@ -67,15 +68,17 @@ public class MPPositionInfo: BaseAsset
         }
     }
 
-    private string[] sideRestrictions;
+    private string[] sideRestrictions = Array.Empty<string>();
     public string[] SideRestrictions
     {
-        get => sideRestrictions;
+        get => (string[])sideRestrictions.Clone();
         set
         {
             if (sideRestrictions != value)
             {
-                sideRestrictions = value;
+                ArgumentNullException.ThrowIfNull(value);
+                if (value.Any(s => s == null)) throw new ArgumentException("Restrictions cannot contain null.", nameof(value));
+                sideRestrictions = (string[])value.Clone();
                 MarkModified();
             }
         }
@@ -83,7 +86,7 @@ public class MPPositionInfo: BaseAsset
     
     public override short GetVersion()
     {
-        return 0;
+        return 1;
     }
 
     public override string GetAssetType()
@@ -108,50 +111,38 @@ public class MPPositionInfo: BaseAsset
     
     public static MPPositionInfo FromBinaryReader(BinaryReader binaryReader, BaseContext context)
     {
-        using var memoryStream = new MemoryStream();
-        using var binaryWriter = new BinaryWriter(memoryStream);
-
-        var mPositionInfo = new MPPositionInfo();
-        
-        var isHuman = binaryReader.ReadBoolean();
-        binaryWriter.Write(isHuman);
-        mPositionInfo.IsHuman = isHuman;
-        
-        var isComputer = binaryReader.ReadBoolean();
-        binaryWriter.Write(isComputer);
-        mPositionInfo.IsComputer = isComputer;
-        
-        var loadAIScript = binaryReader.ReadBoolean();
-        binaryWriter.Write(loadAIScript);
-        mPositionInfo.LoadAIScript = loadAIScript;
-        
-        var team = binaryReader.ReadUInt32();
-        binaryWriter.Write(team);
-        mPositionInfo.Team = team;
-        
-        var sideRestrictionCount = binaryReader.ReadInt32();
-        binaryWriter.Write(sideRestrictionCount);
-        var sideRestrictions = new string[sideRestrictionCount];
-        for (var i = 0; i < sideRestrictionCount; i++)
-        {
-            var restriction = binaryReader.ReadDefaultString();
-            binaryWriter.WriteDefaultString(restriction);
-            sideRestrictions[i] = restriction;
-        }
-        
-        binaryWriter.Flush();
-        mPositionInfo.Data = memoryStream.ToArray();
-        
-        return mPositionInfo;
+        // Preserve the existing payload-reader API. Nested chunk headers are handled by AssetParser.
+        var item = new MPPositionInfo();
+        item.ApplyBasicInfo(context);
+        item.ReadPayload(binaryReader);
+        item.Data = item.Deparse(context);
+        item.DataSize = item.Data.Length;
+        item.Parsed = true;
+        return item;
     }
 
     protected override void _Parse(BaseContext context)
     {
-        throw new NotImplementedException();
+        AssetReadUtility.RequireVersion(this, 1);
+        using var reader = new BinaryReader(new MemoryStream(Data));
+        ReadPayload(reader);
+        AssetReadUtility.RequireEnd(reader);
+    }
+
+    private void ReadPayload(BinaryReader reader)
+    {
+        isHuman = reader.ReadBoolean();
+        isComputer = reader.ReadBoolean();
+        loadAIScript = reader.ReadBoolean();
+        team = reader.ReadUInt32();
+        var count = AssetReadUtility.ReadCount(reader, 2);
+        sideRestrictions = new string[count];
+        for (var i = 0; i < count; i++) sideRestrictions[i] = AssetReadUtility.ReadString(reader);
     }
 
     protected override byte[] Deparse(BaseContext context)
     {
+        AssetReadUtility.RequireWritable(this);
         using var memoryStream = new MemoryStream();
         using var binaryWriter = new BinaryWriter(memoryStream);
         
@@ -159,10 +150,10 @@ public class MPPositionInfo: BaseAsset
         binaryWriter.Write(IsComputer);
         binaryWriter.Write(LoadAIScript);
         binaryWriter.Write(Team);
-        binaryWriter.Write(SideRestrictions.Length);
-        foreach (var restriction in SideRestrictions)
+        binaryWriter.Write(sideRestrictions.Length);
+        foreach (var restriction in sideRestrictions)
         {
-            binaryWriter.WriteDefaultString(restriction);
+            AssetReadUtility.WriteString(binaryWriter, restriction);
         }
         
         binaryWriter.Flush();

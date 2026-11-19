@@ -20,4 +20,8 @@
       <ProjectReference Include="..\..\src\Dreamness.RA3.Map.Parser\Dreamness.RA3.Map.Parser.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <None Include="..\asset_audit\chunk-fixtures.json" Link="Fixtures\chunk-fixtures.json" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+
 </Project>

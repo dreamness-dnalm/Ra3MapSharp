@@ -182,7 +182,6 @@ public class ObjectAsset: BaseAsset
         return asset;
     }
 
-
     public ObjectAsset Clone(BaseContext context)
     {
         var asset = new ObjectAsset();

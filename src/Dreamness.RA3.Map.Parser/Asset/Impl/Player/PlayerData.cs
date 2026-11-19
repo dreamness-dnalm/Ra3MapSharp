@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Dreamness.Ra3.Map.Parser.Asset.Base;
@@ -5,7 +6,6 @@ using Dreamness.Ra3.Map.Parser.Asset.Collection;
 using Dreamness.Ra3.Map.Parser.Asset.Collection.Dim1Array;
 using Dreamness.Ra3.Map.Parser.Asset.Collection.Property;
 using Dreamness.Ra3.Map.Parser.Core.Base;
-using Dreamness.Ra3.Map.Parser.Util;
 using Dreamness.Ra3.Map.Parser.Util;
 
 namespace Dreamness.Ra3.Map.Parser.Asset.Impl.Player;
