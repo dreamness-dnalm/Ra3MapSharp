@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Dreamness.Ra3.Map.Parser.Asset.Base;

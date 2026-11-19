@@ -160,8 +160,7 @@ public class ObjectAsset: BaseAsset
                 {"originalOwner", "/team"},
                 {"uniqueID", name},
                 {"objectLayer", ""},
-                {"waypointTypeOption", ""},
-                {"waypointType", (int)WaypointType.Normal}
+                {"waypointTypeOption", ""}
             }, context);
         
         asset.MarkModified();

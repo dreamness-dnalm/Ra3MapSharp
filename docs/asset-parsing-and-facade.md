@@ -64,7 +64,7 @@ MPPositionInfo.FromBinaryReader 保留原来的“读取负载”接口；嵌套
 - Parser 与 Facade 项目构建成功。
 - Parser 全部测试：356通过，包括315份不同真实区块样本（光照98、后处理62、槽位14、触发区域54、雾16、任务热点16、路点连接55）。每份不仅测试未修改保存，还强制重新编码相关子记录并检查与原字节完全一致。
 - Facade 新增测试：7通过，覆盖压缩/未压缩保存、重开后二次编辑、删除、可选区块、非法输入、失败区块保护、Context替换后的读取。另一个显式测试已生成并重开验证三张人工评审地图。
-- 整个solution构建遇到原有问题：Transform的SymmetryStrategy.cs:113使用RoadObjectWrap，但HEAD中的RoadObjectWrap.cs已经是空文件。此次未修改该类型或Transform，未扩大修改范围解决这个问题。
+- 已变基到当前主分支。主分支上的 RoadObjectWrap 与 WaypointType 保持可用，本次在其上补充已核验的路径 option 位，以及路点路径标签。新建路点不预写 waypointType，缺失值仍按 Normal 读取。
 - 未运行包含本机特定地图/写回操作的全部旧Facade用例；本次新增Facade测试全部使用独立临时地图，清理自己的输出，不修改原地图。
 
 路点连接测试发现并修正原有计数器笔误：ObjectsListAsset.AddWaypoint创建路点后应更新maxWaypointId，原来更新maxObjectId，导致连续添加的路点得到同一个ID。
