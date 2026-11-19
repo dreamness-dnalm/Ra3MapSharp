@@ -103,6 +103,13 @@ public partial class Ra3MapFacade
     /// 获取所有路径点
     /// </summary>
     /// <returns></returns>
+    /// <summary>Finds a live waypoint by its name; returns null when absent.</summary>
+    public WaypointWrap? GetWaypoint(string name)
+    {
+        ArgumentNullException.ThrowIfNull(name);
+        return GetWaypoints().SingleOrDefault(w => w.WaypointName == name);
+    }
+
     public List<WaypointWrap> GetWaypoints()
     {
         return _objectsList

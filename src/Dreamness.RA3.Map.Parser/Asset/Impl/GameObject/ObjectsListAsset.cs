@@ -40,7 +40,6 @@ public class ObjectsListAsset: BaseAsset
         return MapObjectList.Where(asset => asset.IsRoad);
     }
     
-    // TODO: 路径点类型
     private ObjectAsset AddWaypoint(int id, string name, Vec3D position, BaseContext context)
     {
         if (id <= maxWaypointId)

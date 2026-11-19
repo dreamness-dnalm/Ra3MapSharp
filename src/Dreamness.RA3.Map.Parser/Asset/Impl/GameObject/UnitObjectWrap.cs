@@ -35,8 +35,38 @@ public class UnitObjectWrap: ObjectWrap
     /// </summary>
     public int InitialHealth
     {
-        get => Properties.GetProperty<int>("initialHealth");
-        set =>Properties.PutProperty("initialHealth", value);
+        get => Properties.GetProperty<int>(UnitObjectSettings.InitialHealth);
+        set => Properties.PutProperty(UnitObjectSettings.InitialHealth, value);
+    }
+
+    public int ExperienceLevel
+    {
+        get => Properties.GetProperty(UnitObjectSettings.ExperienceLevel, 1);
+        set => Properties.PutProperty(UnitObjectSettings.ExperienceLevel, value);
+    }
+
+    public int InitialStance
+    {
+        get => Properties.GetProperty<int>(UnitObjectSettings.InitialStance);
+        set => Properties.PutProperty(UnitObjectSettings.InitialStance, value);
+    }
+
+    public bool AlignToTerrain
+    {
+        get => Properties.GetProperty<bool>(UnitObjectSettings.AlignToTerrain);
+        set => Properties.PutProperty(UnitObjectSettings.AlignToTerrain, value);
+    }
+
+    public float? PrototypeScale
+    {
+        get => Properties.PropertiesDict.ContainsKey(UnitObjectSettings.PrototypeScale)
+            ? Properties.GetProperty<float>(UnitObjectSettings.PrototypeScale)
+            : null;
+        set
+        {
+            if (value is null) Properties.RemoveProperty(UnitObjectSettings.PrototypeScale);
+            else Properties.PutProperty(UnitObjectSettings.PrototypeScale, value.Value);
+        }
     }
 
     /// <summary>
@@ -117,6 +147,6 @@ public class UnitObjectWrap: ObjectWrap
         set => Properties.PutProperty("objectName", value);
     }
 
-    // TODO: 解析更多
+    // Remaining World Builder keys are read and written through UnitObjectSettings.
     
 }

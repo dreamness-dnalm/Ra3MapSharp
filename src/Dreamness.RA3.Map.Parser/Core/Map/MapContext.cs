@@ -10,11 +10,28 @@ using Dreamness.Ra3.Map.Parser.Asset.Impl.Texture;
 using Dreamness.Ra3.Map.Parser.Asset.Impl.World;
 using Dreamness.Ra3.Map.Parser.Core.Base;
 using Dreamness.Ra3.Map.Parser.Util;
+using Dreamness.Ra3.Map.Parser.Asset.Impl.Lighting;
+using Dreamness.Ra3.Map.Parser.Asset.Impl.PostEffect;
+using Dreamness.Ra3.Map.Parser.Asset.Impl.Unknown;
+using Dreamness.Ra3.Map.Parser.Asset.Impl.Trigger;
+using Dreamness.Ra3.Map.Parser.Asset.Impl.Fog;
+using Dreamness.Ra3.Map.Parser.Asset.Impl.MissionHotSpot;
+using Dreamness.Ra3.Map.Parser.Asset.Impl.Waypoint;
 
 namespace Dreamness.Ra3.Map.Parser.Core.Map;
 
 public class MapContext: BaseContext
 {
+    public GlobalLightingAsset? GlobalLightingAsset => GetOptionalAsset<GlobalLightingAsset>(AssetNameConst.GlobalLighting);
+    public PostEffectsChunkAsset? PostEffectsChunkAsset => GetOptionalAsset<PostEffectsChunkAsset>(AssetNameConst.PostEffectsChunk);
+    public MPPositionListAsset? MPPositionListAsset => GetOptionalAsset<MPPositionListAsset>(AssetNameConst.MPPositionList);
+    public TriggerAreasAsset? TriggerAreasAsset => GetOptionalAsset<TriggerAreasAsset>(AssetNameConst.TriggerAreas);
+    public FogSettingsAsset? FogSettingsAsset => GetOptionalAsset<FogSettingsAsset>(AssetNameConst.FogSettings);
+    public MissionHotSpotsAsset? MissionHotSpotsAsset => GetOptionalAsset<MissionHotSpotsAsset>(AssetNameConst.MissionHotSpots);
+    public WaypointsListAsset? WaypointsListAsset => GetOptionalAsset<WaypointsListAsset>(AssetNameConst.WaypointsList);
+
+    private T? GetOptionalAsset<T>(string name) where T : BaseAsset =>
+        AssetDict.TryGetValue(name, out var asset) ? asset as T : null;
 
     
     public string ExportSidesListAssetToJson()

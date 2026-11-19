@@ -4,12 +4,15 @@ using Dreamness.Ra3.Map.Parser.Asset.Collection.Dim1Array;
 using Dreamness.Ra3.Map.Parser.Asset.SubAsset;
 using Dreamness.Ra3.Map.Parser.Core.Base;
 using Dreamness.Ra3.Map.Parser.Util;
+using Dreamness.Ra3.Map.Parser.Asset.Util;
 
 namespace Dreamness.Ra3.Map.Parser.Asset.Impl.PostEffect;
 
 public class PostEffectsChunkAsset: BaseAsset
 {
     public WritableList<PostEffect> PostEffects = new WritableList<PostEffect>();
+
+    public PostEffectsChunkAsset() => ObservableUtil.Subscribe(PostEffects, this);
     
     public override short GetVersion()
     {
@@ -23,19 +26,21 @@ public class PostEffectsChunkAsset: BaseAsset
 
     protected override void _Parse(BaseContext context)
     {
+        AssetReadUtility.RequireVersion(this, 2);
         using var memoryStream = new MemoryStream(Data);
         using var binaryReader = new BinaryReader(memoryStream);
         
-        int effectCount = binaryReader.ReadInt32();
+        int effectCount = AssetReadUtility.ReadCount(binaryReader, 6);
         for (int i = 0; i < effectCount; i++)
         {
             PostEffects.Add(PostEffect.FromBinaryReader(binaryReader, context), ignoreModified:true);
         }
-        ObservableUtil.Subscribe(PostEffects, this);
+        AssetReadUtility.RequireEnd(binaryReader);
     }
 
     protected override byte[] Deparse(BaseContext context)
     {
+        AssetReadUtility.RequireWritable(this);
         using var memoryStream = new MemoryStream();
         using var binaryWriter = new BinaryWriter(memoryStream);
         

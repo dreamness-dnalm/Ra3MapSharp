@@ -9,6 +9,13 @@ using Dreamness.Ra3.Map.Parser.Asset.Impl.Terrain;
 using Dreamness.Ra3.Map.Parser.Asset.Impl.Texture;
 using Dreamness.Ra3.Map.Parser.Asset.Impl.Unknown;
 using Dreamness.Ra3.Map.Parser.Asset.Impl.World;
+using Dreamness.Ra3.Map.Parser.Asset.Impl.Lighting;
+using Dreamness.Ra3.Map.Parser.Asset.Impl.PostEffect;
+using Dreamness.Ra3.Map.Parser.Asset.SubAsset.Impl.Unknown;
+using Dreamness.Ra3.Map.Parser.Asset.Impl.Trigger;
+using Dreamness.Ra3.Map.Parser.Asset.Impl.Fog;
+using Dreamness.Ra3.Map.Parser.Asset.Impl.MissionHotSpot;
+using Dreamness.Ra3.Map.Parser.Asset.Impl.Waypoint;
 using Dreamness.Ra3.Map.Parser.Core.Base;
 
 namespace Dreamness.Ra3.Map.Parser.Asset.Util;
@@ -104,10 +111,38 @@ public static class AssetParser
             //     asset = asset.Clone<StandingWaterAreasAsset>();
             //     (asset as StandingWaterAreasAsset)?.Parse(context);
             //     break;
-            // case AssetConst.GlobalLighting:
-            //     asset = asset.Clone<GlobalLightingAsset>();
-            //     (asset as GlobalLightingAsset)?.Parse(context);
-            //     break;
+            case AssetNameConst.GlobalLighting:
+                asset = asset.Clone<GlobalLightingAsset>();
+                asset.ParseTolerance(context);
+                break;
+            case AssetNameConst.PostEffectsChunk:
+                asset = asset.Clone<PostEffectsChunkAsset>();
+                asset.ParseTolerance(context);
+                break;
+            case AssetNameConst.MPPositionList:
+                asset = asset.Clone<MPPositionListAsset>();
+                asset.ParseTolerance(context);
+                break;
+            case AssetNameConst.MPPositionInfo:
+                asset = asset.Clone<MPPositionInfo>();
+                asset.ParseTolerance(context);
+                break;
+            case AssetNameConst.TriggerAreas:
+                asset = asset.Clone<TriggerAreasAsset>();
+                asset.ParseTolerance(context);
+                break;
+            case AssetNameConst.FogSettings:
+                asset = asset.Clone<FogSettingsAsset>();
+                asset.ParseTolerance(context);
+                break;
+            case AssetNameConst.MissionHotSpots:
+                asset = asset.Clone<MissionHotSpotsAsset>();
+                asset.ParseTolerance(context);
+                break;
+            case AssetNameConst.WaypointsList:
+                asset = asset.Clone<WaypointsListAsset>();
+                asset.ParseTolerance(context);
+                break;
                 // case AssetConst.BuildLists:
                 //     asset = asset.Clone<BuildListsAsset>();
                 //     (asset as BuildListsAsset)?.Parse(context);

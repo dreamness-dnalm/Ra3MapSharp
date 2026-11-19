@@ -1,0 +1,102 @@
+{
+  "summary": {
+    "MPPositionList": {
+      "records_6": 234,
+      "passed": 237,
+      "empty": 35,
+      "records_8": 3
+    },
+    "GlobalWaterSettings": {
+      "passed": 272
+    },
+    "FogSettings": {
+      "passed": 236
+    },
+    "EnvironmentData": {
+      "passed": 236
+    },
+    "WaypointsList": {
+      "zero": 155,
+      "passed": 236,
+      "nonzero": 81
+    }
+  },
+  "errors": [],
+  "environment_strings": [
+    [
+      "TSCloudMed",
+      "CM2_cloud",
+      "EVDefault"
+    ],
+    [
+      "TSCloudMed",
+      "CM4_cloud",
+      "EVDefault"
+    ],
+    [
+      "TSCloudMed",
+      "TSCloudMed",
+      "EVDefault"
+    ],
+    [
+      "TSNoiseUrb",
+      "CM11_cloud",
+      "EVDefault"
+    ],
+    [
+      "TSNoiseUrb",
+      "CM1_cloud",
+      "EVDefault"
+    ],
+    [
+      "TSNoiseUrb",
+      "CM1_cloud",
+      "EVNightFog2"
+    ],
+    [
+      "TSNoiseUrb",
+      "CM4_cloud",
+      "EVDefault"
+    ],
+    [
+      "TSNoiseUrb",
+      "CM7_cloud",
+      "EVDefault"
+    ],
+    [
+      "TSNoiseUrb",
+      "CM8B_cloud",
+      "EVDefault"
+    ],
+    [
+      "TSNoiseUrb",
+      "CM8B_cloud",
+      "EVNightFog2"
+    ],
+    [
+      "TSNoiseUrb",
+      "CM9_cloud",
+      "EVDefault"
+    ],
+    [
+      "TSNoiseUrb",
+      "TSCloudMed",
+      "EVDefault"
+    ],
+    [
+      "TSNoiseUrb",
+      "TSCloudMed",
+      "EVMorning1"
+    ],
+    [
+      "TS_MacrotextureWhite",
+      "CM2_cloud",
+      "EVDefault"
+    ],
+    [
+      "TS_MacrotextureWhite",
+      "TSCloudMed",
+      "EVDefault"
+    ]
+  ]
+}

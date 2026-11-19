@@ -160,8 +160,7 @@ public class ObjectAsset: BaseAsset
                 {"originalOwner", "/team"},
                 {"uniqueID", name},
                 {"objectLayer", ""},
-                {"waypointTypeOption", ""},
-                {"waypointType", (int)WaypointType.Normal}
+                {"waypointTypeOption", ""}
             }, context);
         
         asset.MarkModified();
@@ -181,7 +180,6 @@ public class ObjectAsset: BaseAsset
         asset._roadOption = options.RawValue;
         return asset;
     }
-
 
     public ObjectAsset Clone(BaseContext context)
     {

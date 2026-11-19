@@ -67,15 +67,18 @@ public class HeightMapDataAsset: BaseAsset
         var _area = binaryReader.ReadInt32();
             
         var elevations = new float[MapWidth, MapHeight];
+        var originalCodes = new ushort[MapWidth, MapHeight];
         for (int y = 0; y < MapHeight; y++)
         {
             for (int x = 0; x < MapWidth; x++)
             {
-                // elevations[x, y] = binaryReader.ReadUInt16();
-                elevations[x, y] = StreamExtension.FromSageFloat16(binaryReader.ReadUInt16());
+                var code = binaryReader.ReadUInt16();
+                originalCodes[x, y] = code;
+                elevations[x, y] = StreamExtension.FromSageFloat16(code);
             }
         }
         Elevations = new ElevationDim2Array(elevations);
+        Elevations.KeepOriginalCodes(originalCodes);
         ObservableUtil.Subscribe(Elevations, this);
     }
 
